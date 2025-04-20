@@ -29,7 +29,7 @@ impl IgnoreSet {
 
                 result.dir_ignore.insert(i);
             } else {
-                result.dir_ignore.insert(line.to_string());
+                result.file_ignore.insert(line.to_string());
             }
         }
 
