@@ -1,7 +1,7 @@
 use std::fs;
 use serde::{Deserialize, Serialize};
 
-use crate::{content::{Content, Directory, File}, error::BonesError};
+use crate::{content::{Content, Directory, File}, error::BonesError, ignore::IgnoreSet};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct State {
@@ -19,9 +19,9 @@ impl State {
         }
     }
 
-    pub fn create(path: String) -> Result<State, BonesError> {
+    pub fn create(path: String, ignore_set: &IgnoreSet) -> Result<State, BonesError> {
         let mut s = State::empty();
-        match State::content_at(path.clone(), path) {
+        match State::content_at(path.clone(), path, ignore_set) {
             Ok(c) => {
                 s.contents = c;
                 Ok(s)
@@ -32,7 +32,7 @@ impl State {
         }
     }
 
-    pub fn content_at(file_name: String, root_path: String) -> Result<Content, BonesError> {
+    pub fn content_at(file_name: String, root_path: String, ignore_set: &IgnoreSet) -> Result<Content, BonesError> {
         // println!("started at {root_path}");
 
         // get all files at path
@@ -58,16 +58,12 @@ impl State {
                         continue;
                     }
 
-                    if file_name == "target" {
-                        continue;
-                    }
-
-                    if file_name == "ignore" {
-                        continue;
-                    }
-
                     if file_type.is_dir() {
-                        match State::content_at(file_name, file_path) {
+                        if ignore_set.dir_ignore.contains(&file_name) {
+                            continue;
+                        }
+
+                        match State::content_at(file_name, file_path, ignore_set) {
                             Ok(c) => {
                                 directory_contents.push(c);
                             },
@@ -76,6 +72,10 @@ impl State {
                             }
                         }
                     } else if file_type.is_file() {
+                        if ignore_set.file_ignore.contains(&file_name) {
+                            continue;
+                        }
+
                         match File::create(file_name, file_path) {
                             Ok(f) => {
                                 directory_contents.push(Content::File(f));
@@ -84,6 +84,9 @@ impl State {
                         }
                     } else if file_type.is_symlink() {
                         // TODO : decide what to do here
+                        if ignore_set.file_ignore.contains(&file_name) {
+                            continue;
+                        }
                     }
                 },
                 Err(e) => {

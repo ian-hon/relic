@@ -1,6 +1,8 @@
+use std::fs;
 use std::{collections::HashMap, env};
 
 mod error;
+mod ignore;
 mod state;
 mod utils;
 
@@ -10,6 +12,8 @@ mod stash;
 
 mod content;
 mod bones;
+
+use ignore::IgnoreSet;
 
 use crate::commit::{add, commit, push, pull, fetch, cherry, rollback};
 use crate::branch::branch;
@@ -59,6 +63,7 @@ implemented."#);
 }
 
 fn main() {
+    // build all commands
     type CommandType = fn(State, Vec<String>);
     let commands: HashMap<String, CommandType> = HashMap::from_iter::<Vec<(String, CommandType)>>(vec![
         ("add".to_string(), add),
@@ -74,21 +79,30 @@ fn main() {
         ("help".to_string(), help),
         ("about".to_string(), about)
     ]);
-
+    //
+    
+    // collect all arguments
     let arguments = env::args().collect::<Vec<String>>();
     if arguments.len() <= 1 {
         help(State::empty(), vec![]);
         return;
     }
+    //
 
+    // get current path
     let path = std::env::current_dir();
     if path.is_err() {
         println!("Can't get current path.");
         return;
     }
     let path = path.unwrap();
+    //
 
-    match State::create(path.to_str().unwrap().to_string()) {
+    //
+    let ignore_set = IgnoreSet::create(fs::read_to_string(path.join(".bones_ignore")).unwrap_or("".to_string()));
+    //
+
+    match State::create(path.to_str().unwrap().to_string(), &ignore_set) {
         Ok(s) => {
             match commands.get(&arguments[1]) {
                 Some(c) => {
