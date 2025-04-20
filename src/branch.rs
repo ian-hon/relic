@@ -1,3 +1,5 @@
-pub fn branch(path: String, args: Vec<String>) {
+use crate::state::State;
+
+pub fn branch(state: State, args: Vec<String>) {
 
 }

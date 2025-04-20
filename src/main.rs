@@ -1,12 +1,20 @@
 use std::{collections::HashMap, env};
 
+mod error;
+mod state;
+mod utils;
+
 mod commit;
 mod branch;
 mod stash;
 
+mod content;
+mod bones;
+
 use crate::commit::{add, commit, push, pull, fetch, cherry, rollback};
-use crate::branch::{branch};
+use crate::branch::branch;
 use crate::stash::{stash, restore};
+use crate::state::State;
 
 // add
 // commit {message}
@@ -31,11 +39,11 @@ pub fn init(_: String, _: Vec<String>) {
 }
 
 
-pub fn help(_: String, _: Vec<String>) {
+pub fn help(_: State, _: Vec<String>) {
     println!(r#"This is the Barebones Version Control System."#);
 }
 
-pub fn about(_: String, _: Vec<String>) {
+pub fn about(_: State, _: Vec<String>) {
     println!(r#"This is the Barebones Version Control System.
 
 The best way to learn is to stupidly and
@@ -51,7 +59,8 @@ implemented."#);
 }
 
 fn main() {
-    let commands: HashMap<String, fn(String, Vec<String>)> = HashMap::from_iter::<Vec<(String, fn(String, Vec<String>))>>(vec![
+    type CommandType = fn(State, Vec<String>);
+    let commands: HashMap<String, CommandType> = HashMap::from_iter::<Vec<(String, CommandType)>>(vec![
         ("add".to_string(), add),
         ("commit".to_string(), commit),
         ("push".to_string(), push),
@@ -62,22 +71,37 @@ fn main() {
         ("restore".to_string(), restore),
         ("rollback".to_string(), rollback),
         ("cherry".to_string(), cherry),
-        ("help".to_string(), help)
+        ("help".to_string(), help),
+        ("about".to_string(), about)
     ]);
 
     let arguments = env::args().collect::<Vec<String>>();
     if arguments.len() <= 1 {
-        help("".to_string(), vec![]);
+        help(State::empty(), vec![]);
         return;
     }
 
-    match commands.get(&arguments[1]) {
-        Some(c) => {
-            c(arguments[0].clone(), arguments[2..arguments.len()].to_vec());
+    let path = std::env::current_dir();
+    if path.is_err() {
+        println!("Can't get current path.");
+        return;
+    }
+    let path = path.unwrap();
+
+    match State::create(path.to_str().unwrap().to_string()) {
+        Ok(s) => {
+            match commands.get(&arguments[1]) {
+                Some(c) => {
+                    c(s, arguments[2..arguments.len()].to_vec());
+                },
+                None => {
+                    println!("Command not found.");
+                    help(State::empty(), vec![]);
+                }
+            }
         },
-        None => {
-            println!("Command not found.");
-            help("".to_string(), vec![]);
+        Err(e) => {
+            println!("{e:?} error encountered.")
         }
     }
 }

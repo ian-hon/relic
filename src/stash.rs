@@ -1,7 +1,9 @@
-pub fn stash(path: String, args: Vec<String>) {
+use crate::state::State;
+
+pub fn stash(state: State, args: Vec<String>) {
 
 }
 
-pub fn restore(path: String, args: Vec<String>) {
+pub fn restore(state: State, args: Vec<String>) {
 
 }
