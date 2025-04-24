@@ -1,4 +1,5 @@
 use std::fs;
+use std::path::Path;
 use std::{collections::HashMap, env};
 
 mod error;
@@ -11,9 +12,12 @@ mod branch;
 mod stash;
 
 mod content;
-mod bones;
+mod change;
 
+use change::Change;
+use content::{Content, Directory, File};
 use ignore::IgnoreSet;
+use utils::generate_tree;
 
 use crate::commit::{add, commit, push, pull, fetch, cherry, rollback};
 use crate::branch::branch;
@@ -63,6 +67,64 @@ implemented."#);
 }
 
 fn main() {
+    println!("{:?}", Change::get_change_container(
+        &Directory {
+            name: "test".to_string(),
+            content: vec![
+                Content::Directory(Directory {
+                    name: "dolor".to_string(),
+                    content: vec![]
+                }),
+                Content::Directory(Directory {
+                    name: "sit".to_string(),
+                    content: vec![
+                        Content::Directory(Directory {
+                            name: "new_dir".to_string(),
+                            content: vec![
+                                Content::File(File {
+                                    name: "smaller.txt".to_string(),
+                                    content: "".to_string()
+                                }),
+                            ]
+                        }),
+                    ]
+                }),
+                Content::File(File {
+                    name: "test.txt".to_string(),
+                    content: "".to_string()
+                })
+            ]
+        },
+       &Directory {
+            name: "test".to_string(),
+            content: vec![
+                Content::Directory(Directory {
+                    name: "sit".to_string(),
+                    content: vec![
+                        Content::Directory(Directory {
+                            name: "new_dir".to_string(),
+                            content: vec![
+                                Content::Directory(Directory {
+                                    name: "small".to_string(),
+                                    content: vec![]
+                                }),
+                                Content::File(File {
+                                    name: "smaller.txt".to_string(),
+                                    content: "".to_string()
+                                }),
+                            ]
+                        }),
+                    ]
+                }),
+                Content::File(File {
+                    name: "test.txt".to_string(),
+                    content: "".to_string()
+                }),
+            ]
+        },
+        Path::new("here")
+    ));
+
     // build all commands
     type CommandType = fn(State, Vec<String>);
     let commands: HashMap<String, CommandType> = HashMap::from_iter::<Vec<(String, CommandType)>>(vec![
@@ -77,7 +139,11 @@ fn main() {
         ("rollback".to_string(), rollback),
         ("cherry".to_string(), cherry),
         ("help".to_string(), help),
-        ("about".to_string(), about)
+        ("about".to_string(), about),
+
+        ("tree".to_string(), |s, _| {
+            println!("{}", generate_tree(s));
+        })
     ]);
     //
     
@@ -98,7 +164,7 @@ fn main() {
     let path = path.unwrap();
     //
 
-    //
+    // get ignorance set
     let ignore_set = IgnoreSet::create(fs::read_to_string(path.join(".bones_ignore")).unwrap_or("".to_string()));
     //
 

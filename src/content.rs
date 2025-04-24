@@ -7,7 +7,7 @@ use crate::error::BonesError;
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum Content {
     Directory(Directory),
-    File(File)
+    File(File),
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -32,7 +32,7 @@ impl File {
                     content: content
                 })
             },
-            Err(e) => {
+            Err(_) => {
                 // println!("Error creating file : {e}");
                 Err(BonesError::FileCantOpen)
             }

@@ -5,29 +5,33 @@ use crate::{content::{Content, Directory, File}, error::BonesError, ignore::Igno
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct State {
-    pub contents: Content
-    // should always be Content::Directory
+    pub current: Directory,
+    pub upstream: Directory
 }
 
 impl State {
     pub fn empty() -> State {
         State {
-            contents: Content::Directory(Directory {
+            current: Directory {
                 name: "".to_string(),
                 content: vec![]
-            })
+            },
+            upstream: Directory {
+                name: "".to_string(),
+                content: vec![]
+            }
         }
     }
 
     pub fn create(path: String, ignore_set: &IgnoreSet) -> Result<State, BonesError> {
         let mut s = State::empty();
-        match State::content_at(path.clone(), path, ignore_set) {
-            Ok(c) => {
-                s.contents = c;
+        match State::content_at(path.clone(), path, ignore_set)? {
+            Content::Directory(d) => {
+                s.current = d;
                 Ok(s)
             },
-            Err(e) => {
-                Err(e)
+            _ => {
+                Err(BonesError::ConfigurationIncorrect)
             }
         }
     }
@@ -99,5 +103,30 @@ impl State {
             name: file_name,
             content: directory_contents
         }))
+    }
+
+    // #region init
+    pub fn init(path: String) {
+        // .bones/
+        //      history.changes
+        //      now.changes
+        //      root
+        
+    }
+    // #endregion
+
+    pub fn serialise_state(self: &State) -> String {
+        serde_json::to_string(self).unwrap()
+    }
+    
+    pub fn deserialise_state(s: String) -> Option<State> {
+        match serde_json::from_str(&s) {
+            Ok(s) => {
+                Some(s)
+            },
+            Err(_) => {
+                None
+            }
+        }
     }
 }

@@ -1,7 +1,7 @@
 use crate::{content::Content, state::State};
 
 pub fn generate_tree(state: State) -> String {
-    return fetch_contents(&state.contents);
+    return fetch_contents(&Content::Directory(state.current));
 }
 
 fn fetch_contents(c: &Content) -> String {
