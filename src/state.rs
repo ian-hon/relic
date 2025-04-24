@@ -34,6 +34,9 @@ impl State {
                 Err(BonesError::ConfigurationIncorrect)
             }
         }
+
+        // fetch upstream
+
     }
 
     pub fn content_at(file_name: String, root_path: String, ignore_set: &IgnoreSet) -> Result<Content, BonesError> {
@@ -104,16 +107,6 @@ impl State {
             content: directory_contents
         }))
     }
-
-    // #region init
-    pub fn init(path: String) {
-        // .bones/
-        //      history.changes
-        //      now.changes
-        //      root
-        
-    }
-    // #endregion
 
     pub fn serialise_state(self: &State) -> String {
         serde_json::to_string(self).unwrap()

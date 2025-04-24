@@ -79,21 +79,6 @@ impl Change {
                 result.push(
                     ContainerModification::CreateFile(path.join(d.clone()).to_string_lossy().to_string(), d)
                 );
-            } else {
-                // let p = path.join(d.clone()).to_string_lossy().to_string();
-                // result.push(
-                //     ContainerModification::CreateDirectory(p.clone(), d.clone())
-                // );
-                // match current_map.get(&d).unwrap() {
-                //     Content::Directory(dir) => {
-                //         result.append(&mut Change::get_change_container(
-                //             &Directory::new(),
-                //             dir,
-                //             Path::new(&p)
-                //         ));
-                //     },
-                //     _ => {}
-                // }
             }
         }
 
