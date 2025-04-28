@@ -143,7 +143,7 @@ fn main() {
         ("about".to_string(), about),
 
         ("tree".to_string(), |s, _| {
-            println!("{}", generate_tree(s));
+            println!("{}", generate_tree(&s));
         }),
 
         ("init".to_string(), init)

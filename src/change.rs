@@ -66,13 +66,31 @@ impl Change {
 
         let mut result = vec![];
         for (d, is_file) in deleted {
-            result.push(
-                if is_file {
-                    ContainerModification::DeleteFile(path.join(d.clone()).to_string_lossy().to_string())
-                } else {
-                    ContainerModification::DeleteDirectory(path.join(d.clone()).to_string_lossy().to_string())
-                }
-            );
+            // result.push(
+            //     if is_file {
+            //         ContainerModification::DeleteFile(path.join(d.clone()).to_string_lossy().to_string())
+            //     } else {
+            //         ContainerModification::DeleteDirectory(path.join(d.clone()).to_string_lossy().to_string())
+            //     }
+            // );
+
+            if is_file {
+                result.push(ContainerModification::DeleteFile(path.join(d.clone()).to_string_lossy().to_string()));
+            } else {
+                let p = path.join(d.clone());
+                result.push(ContainerModification::DeleteDirectory(p.to_string_lossy().to_string()));
+                // traverse all children, add them to result as well
+                result.append(
+                    &mut Change::get_change_container(
+                        match upstream_map.get(&(d, false)).unwrap() {
+                            Content::Directory(deleted_d) => { deleted_d },
+                            _ => { panic!() }
+                        },
+                        &Directory::new(),
+                        &p
+                    )
+                );
+            }
         }
         for (d, is_file) in created {
             if is_file {
