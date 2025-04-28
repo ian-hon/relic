@@ -159,12 +159,8 @@ fn main() {
     //
 
     // get current path
-    let path = std::env::current_dir();
-    if path.is_err() {
-        println!("Can't get current path.");
-        return;
-    }
-    let path = path.unwrap();
+    // (used to be more complicated than this, but keeping it as a relative path just makes more sense now)
+    let path = Path::new(".");
     //
 
     // get ignorance set
@@ -184,9 +180,13 @@ fn main() {
     };
     //
 
-    match State::create(path.to_str().unwrap().to_string(), &ignore_set) {
+    // match State::create(path.to_str().unwrap().to_string(), &ignore_set) {
+    match State::create(".".to_string(), &ignore_set) {
         Ok(s) => {
             println!("{:?}", Change::get_change_container(&upstream_state.upstream.current, &s.current, &path));
+
+            println!("{}", generate_tree(&upstream_state.upstream));
+            // fs::write("./.bones/upstream", s.serialise_state());
 
             match commands.get(&arguments[1]) {
                 Some(c) => {

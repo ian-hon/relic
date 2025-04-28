@@ -43,10 +43,10 @@ impl State {
         // println!("started at {root_path}");
 
         // get all files at path
-        let paths = match fs::read_dir(root_path.clone()) {
+        let paths = match fs::read_dir(format!("./{}", root_path.clone())) {
             Ok(r) => r,
             Err(e) => {
-                println!("Error : {root_path} : {e:?}");
+                println!("state.rs (content_at) : {root_path} : {e:?}");
                 return Err(BonesError::FileCantOpen);
             }
         };
