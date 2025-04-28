@@ -17,6 +17,7 @@ mod change;
 
 use bones::Bones;
 use change::Change;
+use content::File;
 use ignore::IgnoreSet;
 use utils::generate_tree;
 
@@ -68,6 +69,15 @@ implemented."#);
 }
 
 fn main() {
+    // for change in Change::get_change(
+    //     "".to_string(),
+    //     &File { name: "".to_string(), content: fs::read_to_string("./lorem/mars").unwrap() },
+    //     &File { name: "".to_string(), content: fs::read_to_string("./lorem/earth").unwrap() })
+    // {
+    //     println!("{change:?}");
+    // }
+    // return;
+
     // println!("{:?}", Change::get_change_container(
     //     &Directory {
     //         name: "test".to_string(),
@@ -170,9 +180,7 @@ fn main() {
     // get upstream
     // return error if not found
     let upstream_state = match Bones::load(&path) {
-        Some(u) => {
-            u
-        },
+        Some(u) => { u },
         None => {
             println!("Upstream does not exist, consider running 'bones init' instead.");
             Bones::empty()
@@ -180,12 +188,14 @@ fn main() {
     };
     //
 
-    // match State::create(path.to_str().unwrap().to_string(), &ignore_set) {
     match State::create(".".to_string(), &ignore_set) {
         Ok(s) => {
-            println!("{:?}", Change::get_change_container(&upstream_state.upstream.current, &s.current, &path));
+            for change in Change::get_change_container(&upstream_state.upstream.current, &s.current, &path).1 {
+                println!("{change:?}");
+            }
 
-            println!("{}", generate_tree(&upstream_state.upstream));
+            // println!("Upstream :\n{}", generate_tree(&upstream_state.upstream));
+            // println!("Current :\n{}", generate_tree(&s));
             // fs::write("./.bones/upstream", s.serialise_state());
 
             match commands.get(&arguments[1]) {
