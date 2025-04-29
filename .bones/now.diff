@@ -1,0 +1,11 @@
+= {unix timestamp of commit} "{message}" "{description}"
++ D "lorem/ipsum/dolor" "dolor"
++ F "lorem/ipsum/dolor/earth.txt" "earth.txt"
+- D "lorem/sit" "sit"
+=
+| "lorem/ipsum/dolor/earth.txt"
++ 3 asdfsdf
++ 5 sfsdf
+- 7 blablabal
+| "lorem/ipsum/saturn/txt"
++ 4 lsdfljs

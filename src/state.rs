@@ -46,7 +46,7 @@ impl State {
         let paths = match fs::read_dir(format!("./{}", root_path.clone())) {
             Ok(r) => r,
             Err(e) => {
-                println!("state.rs (content_at) : {root_path} : {e:?}");
+                println!("state.rs (content_at) get all dirs : {root_path} : {e:?}");
                 return Err(BonesError::FileCantOpen);
             }
         };
@@ -75,7 +75,7 @@ impl State {
                                 directory_contents.push(c);
                             },
                             Err(e) => {
-                                println!("Error subtraverse : {e:?}");
+                                println!("state.rs (content_at) subtraverse : {e:?}");
                             }
                         }
                     } else if file_type.is_file() {
@@ -97,7 +97,7 @@ impl State {
                     }
                 },
                 Err(e) => {
-                    println!("Traverse error : {e:?}");
+                    println!("state.rs (content_at) read_dir : {e:?}");
                 }
             }
         }

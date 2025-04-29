@@ -1,4 +1,4 @@
-use std::{collections::{HashMap, HashSet}, path::Path};
+use std::{collections::{HashMap, HashSet}, path::{self, Path}};
 
 use similar::{ChangeTag, TextDiff};
 use strum_macros::Display;
@@ -11,12 +11,63 @@ pub struct Change {
     pub modifications: Vec<Modification>
 }
 impl Change {
-    pub fn serialise_changes() -> String {
-        "".to_string()
-    }
-    
-    pub fn deserialise_changes() -> String {
-        "".to_string()
+    pub fn serialise_changes(self) -> String {
+// + D "lorem/ipsum/dolor"
+// + F "lorem/ipsum/dolor/earth.txt" "earth.txt"
+// - D "lorem/sit"
+// =
+// | "lorem/ipsum/dolor/earth.txt"
+// + 3 asdfsdf
+// + 5 sfsdf
+// - 7
+// | "lorem/ipsum/saturn/txt"
+// + 4 lsdfljs
+        
+        let mut result: Vec<String> = vec![];
+
+        for c_m in self.container_modifications {
+            result.push(
+                match c_m {
+                    ContainerModification::CreateDirectory(p, n) => {
+                        format!("+ D {p:?} {n:?}")
+                    },
+                    ContainerModification::DeleteDirectory(p) => {
+                        format!("- D {p:?}")
+                    },
+                    ContainerModification::CreateFile(p, n) => {
+                        format!("+ F {p:?} {n:?}")
+                    },
+                    ContainerModification::DeleteFile(p) => {
+                        format!("+ F {p:?}")
+                    }
+                }
+            );
+        }
+
+        result.push("=".to_string());
+
+        let mut map = HashMap::new();
+        for modification in &self.modifications {
+            let path = match modification {
+                Modification::Create(path, _, _, _) => path.clone(),
+                Modification::Delete(path, _, _) => path.clone()
+            };
+            map.entry(path).or_insert(vec![]).push(modification.clone());
+        }
+
+        for (path, modifications) in map {
+            result.push(format!("| {path:?}"));
+            for m in modifications {
+                result.push(
+                    match m {
+                        Modification::Create(_, _, line, content) => format!("+ {line} {content:?}"),
+                        Modification::Delete(_, _, line) => format!("- {line}")
+                    }
+                )
+            }
+        }
+
+        result.join("\n")
     }
 
     pub fn get_change(path: String, upstream_file: &File, current_file: &File) -> Vec<Modification> {
@@ -64,7 +115,7 @@ impl Change {
         result
     }
 
-    pub fn get_change_container(upstream: &Directory, current: &Directory, path: &Path) -> (Vec<ContainerModification>, Vec<Modification>) {
+    pub fn get_change_all(upstream: &Directory, current: &Directory, path: &Path) -> Change {
         // assume that both current and previous have the same directory names
         // has to be bfs
 
@@ -118,7 +169,7 @@ impl Change {
                 let p = path.join(dir_name.clone());
                 container_modifications.push(ContainerModification::DeleteDirectory(p.to_string_lossy().to_string()));
                 // traverse all children, add them to result as well
-                let (mut c_m, mut m) = Change::get_change_container(
+                let mut changes = Change::get_change_all(
                     match upstream_map.get(&(dir_name, false)).unwrap() {
                         Content::Directory(deleted_d) => { deleted_d },
                         _ => panic!()
@@ -126,8 +177,8 @@ impl Change {
                     &Directory::new(),
                     &p
                 );
-                container_modifications.append(&mut c_m);
-                modifications.append(&mut m);
+                container_modifications.append(&mut changes.container_modifications);
+                modifications.append(&mut changes.modifications);
             }
         }
         //
@@ -147,7 +198,7 @@ impl Change {
                 let p = path.join(dir_name.clone());
                 container_modifications.push(ContainerModification::CreateDirectory(p.to_string_lossy().to_string(), dir_name.clone()));
 
-                let (mut c_m, mut m) = Change::get_change_container(
+                let mut changes = Change::get_change_all(
                     &Directory::new(),
                     match current_map.get(&(dir_name, false)).unwrap() {
                         Content::Directory(d) => d,
@@ -155,8 +206,8 @@ impl Change {
                     },
                     &p
                 );
-                container_modifications.append(&mut c_m);
-                modifications.append(&mut m);
+                container_modifications.append(&mut changes.container_modifications);
+                modifications.append(&mut changes.modifications);
             }
         }
 
@@ -178,13 +229,13 @@ impl Change {
                     };
                     //
 
-                    let (mut c_m, mut m) = Change::get_change_container(
+                    let mut changes = Change::get_change_all(
                         upstream_directory,
                         directory,
                         &p
                     );
-                    container_modifications.append(&mut c_m);
-                    modifications.append(&mut m);
+                    container_modifications.append(&mut changes.container_modifications);
+                    modifications.append(&mut changes.modifications);
                 },
                 Content::File(f) => {
                     let upstream_file = match upstream_map.get(&(f.name.clone(), true)) 
@@ -201,11 +252,14 @@ impl Change {
             }
         }
 
-        (container_modifications, modifications)
+        Change {
+            container_modifications,
+            modifications
+        }
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Modification {
     // creation/deletion of lines in files
     Create(
@@ -218,12 +272,6 @@ pub enum Modification {
         String, // path
         String, // file name
         usize // line
-    ),
-    Update(
-        String, // path
-        String, // file name
-        usize, // line
-        String // text
     )
 }
 

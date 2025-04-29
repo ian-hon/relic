@@ -190,9 +190,7 @@ fn main() {
 
     match State::create(".".to_string(), &ignore_set) {
         Ok(s) => {
-            for change in Change::get_change_container(&upstream_state.upstream.current, &s.current, &path).1 {
-                println!("{change:?}");
-            }
+            println!("{}", Change::get_change_all(&upstream_state.upstream.current, &s.current, &path).serialise_changes());
 
             // println!("Upstream :\n{}", generate_tree(&upstream_state.upstream));
             // println!("Current :\n{}", generate_tree(&s));
