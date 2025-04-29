@@ -1,5 +1,6 @@
 use std::{collections::{HashMap, HashSet}, path::Path};
 
+use similar::{ChangeTag, TextDiff};
 use strum_macros::Display;
 
 use crate::{content::{Content, Directory, File}, state::State};
@@ -19,100 +20,45 @@ impl Change {
     }
 
     pub fn get_change(path: String, upstream_file: &File, current_file: &File) -> Vec<Modification> {
+        // https://blog.jcoglan.com/2017/02/15/the-myers-diff-algorithm-part-2/
+        // for our change algorithm, we will be using myers diff algorithm
+        // basically a shortest distance problem, with downwards, rightwards and diagonal directions as movement choices
+        // (note that diagonal movements do not contribute towards the distance)
+
         let upstream = upstream_file.content.clone();
         let current = current_file.content.clone();
 
-        if upstream == current { // compare hashes later
+        // TODO : compare hashes instead of files
+        if upstream == current {
             return vec![];
         }
 
-        let upstream_lines = upstream.split("\n").map(|x| x.to_string()).collect::<Vec<String>>();
-        let current_lines = current.split("\n").map(|x| x.to_string()).collect::<Vec<String>>();
-
-        let upstream_length = upstream_lines.len();
-        let current_length = current_lines.len();
-
-        // current algorithm works but sometimes inaccurate when there are lines with equal content
-        // note: as of 28.4.24, i have just learnt about Levenstein Distance
-        // will update accordingly
-
-        // parallel pointer incrementation
-        let mut left = 0; // upstream index
-        let mut right = 0; // current index
         let mut result = vec![];
+        let diff = TextDiff::from_lines(&upstream, &current);
 
-        'outer: while ((left + 1) < upstream_length) && ((right + 1) < current_length) {
-            if upstream_lines[left] == current_lines[right] {
-                left += 1;
-                right += 1;
-                continue;
+        for change in diff
+            .iter_all_changes()
+            .filter_map(|c| match c.tag() {
+                ChangeTag::Equal => None,
+                _ => Some(c)
             }
-
-            // println!("change at {left} : {right}");
-
-            // iterate to eof
-            let mut left_copy = left.clone();
-            while (left_copy + 1) < upstream_length {
-                left_copy += 1;
-
-                // println!("lc : {left_copy} : {right}\n\t{}\n\t{}", upstream_lines[left_copy], current_lines[right]);
-
-                if upstream_lines[left_copy] == current_lines[right] {
-                    // its a delete event
-                    // lines from left_copy - left are all deleted
-                    // on the right side, the lines are
-                    // right -> (right + (left_copy - left))
-                    for r in right..(right + (left_copy - left)) {
-                        result.push(Modification::Delete(path.clone(), current_file.name.clone(), r));
-                    }
-
-                    left = left_copy;
-
-                    left += 1;
-                    right += 1;
-                    continue 'outer;
+        ) {
+            result.push(
+                match change.tag() {
+                    ChangeTag::Delete => Modification::Delete(
+                        path.clone(),
+                        current_file.name.clone(),
+                        change.old_index().unwrap()
+                    ),
+                    ChangeTag::Insert => Modification::Create(
+                        path.clone(),
+                        current_file.name.clone(),
+                        change.new_index().unwrap(),
+                        change.to_string()
+                    ),
+                    _ => panic!()
                 }
-            }
-
-            let mut right_copy = right.clone();
-            while (right_copy + 1) < current_length {
-                right_copy += 1;
-
-                if current_lines[right_copy] == upstream_lines[left] {
-                    // its a create event
-                    // lines from right -> right_copy are all created
-                    for r in right..right_copy {
-                        result.push(Modification::Create(path.clone(), current_file.name.clone(), r, current_lines[r].clone()));
-                    }
-
-                    right = right_copy;
-
-                    left += 1;
-                    right += 1;
-                    continue 'outer;
-                }
-            }
-
-            // reached eof
-            // println!("cant find, must be a modified line");
-            // result.push(Modification::Create(right, current_lines[right].clone()));
-            // result.push(Modification::Delete(right));
-            result.push(Modification::Update(path.clone(), current_file.name.clone(), right, current_lines[right].clone()));
-
-            left += 1;
-            right += 1;
-        }
-
-        // TODO : investigate whether these two loops can lead to an oob index
-        for r in (if right == 0 { 0 } else { right + 1 })..(right + (upstream_length - left)) {
-            // all of these are deleted
-            // right..(right + (left_copy - left))
-            result.push(Modification::Delete(path.clone(), current_file.name.clone(), r));
-        }
-
-        for r in (if right == 0 { 0 } else { right + 1 })..current_length {
-            // all of these are newly created
-            result.push(Modification::Create(path.clone(), current_file.name.clone(), r, current_lines[r].clone()));
+            )
         }
 
         result
