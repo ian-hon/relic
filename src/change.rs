@@ -1,9 +1,8 @@
-use std::{collections::{HashMap, HashSet}, path::{self, Path}};
+use std::{collections::{HashMap, HashSet}, path::Path};
 
 use similar::{ChangeTag, TextDiff};
-use strum_macros::Display;
 
-use crate::{content::{Content, Directory, File}, state::State};
+use crate::content::{Content, Directory, File};
 
 #[derive(Debug)]
 pub struct Change {
@@ -38,7 +37,7 @@ impl Change {
                         format!("+ F {p:?} {n:?}")
                     },
                     ContainerModification::DeleteFile(p) => {
-                        format!("+ F {p:?}")
+                        format!("- F {p:?}")
                     }
                 }
             );

@@ -2,7 +2,7 @@ use std::fs;
 
 use serde::{Deserialize, Serialize};
 
-use crate::error::BonesError;
+use crate::error::RelicError;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum Content {
@@ -24,7 +24,7 @@ impl File {
         }
     }
 
-    pub fn create(name: String, path: String) -> Result<File, BonesError> {
+    pub fn create(name: String, path: String) -> Result<File, RelicError> {
         match fs::read_to_string(path) {
             Ok(content) => {
                 Ok(File {
@@ -34,7 +34,7 @@ impl File {
             },
             Err(_) => {
                 // println!("Error creating file : {e}");
-                Err(BonesError::FileCantOpen)
+                Err(RelicError::FileCantOpen)
             }
         }
     }

@@ -11,8 +11,8 @@ impl IgnoreSet {
             file_ignore: HashSet::new()
         };
 
-        // always ignore the .bones directory
-        result.dir_ignore.insert(".bones".to_string());
+        // always ignore the .relic directory
+        result.dir_ignore.insert(".relic".to_string());
 
         for line in content.split("\n") {
             if line.is_empty() {

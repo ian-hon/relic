@@ -3,7 +3,7 @@ use std::{fs, path::Path};
 use crate::state::State;
 
 #[derive(Debug)]
-pub struct Bones {
+pub struct Relic {
     // holds
     //      history.changes
     //      now.changes
@@ -11,25 +11,25 @@ pub struct Bones {
     //      upstream
     pub upstream: State
 }
-impl Bones {
-    pub fn empty() -> Bones {
-        Bones {
+impl Relic {
+    pub fn empty() -> Relic {
+        Relic {
             upstream: State::empty()
         }
     }
 
     pub fn init(path: String) {
-        // .bones/
+        // .relic/
         //      history.changes
         //      now.changes
         //      root
         //      upstream
     }
 
-    pub fn load(path: &Path) -> Option<Bones> {
-        let mut result = Bones::empty();
+    pub fn load(path: &Path) -> Option<Relic> {
+        let mut result = Relic::empty();
 
-        result.upstream = State::deserialise_state(match fs::read_to_string(path.join(".bones/upstream")) {
+        result.upstream = State::deserialise_state(match fs::read_to_string(path.join(".relic/upstream")) {
             Ok(data) => { data },
             Err(_) => { return None; }
         })?;

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
-pub enum BonesError {
+pub enum RelicError {
     FileCantOpen,
     IgnoredFile,
     ConfigurationIncorrect

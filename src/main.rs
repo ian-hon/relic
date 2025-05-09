@@ -7,7 +7,7 @@ mod ignore;
 mod state;
 mod utils;
 
-mod bones;
+mod relic;
 mod commit;
 mod branch;
 mod stash;
@@ -15,7 +15,7 @@ mod stash;
 mod content;
 mod change;
 
-use bones::Bones;
+use relic::Relic;
 use change::Change;
 use content::File;
 use ignore::IgnoreSet;
@@ -50,16 +50,16 @@ pub fn init(_: State, _: Vec<String>) {
 
 
 pub fn help(_: State, _: Vec<String>) {
-    println!(r#"This is the Barebones Version Control System."#);
+    println!(r#"This is the Relic Version Control System."#);
 }
 
 pub fn about(_: State, _: Vec<String>) {
-    println!(r#"This is the Barebones Version Control System.
+    println!(r#"This is the Relic Version Control System.
 
 The best way to learn is to stupidly and
 blindly reinvent the wheel.
 
-Barebones VCS (or just Bones) is a simple
+Relic is a simple
 hobby project, because remaking Git sounded
 fun and interesting.
 
@@ -156,7 +156,11 @@ fn main() {
             println!("{}", generate_tree(&s));
         }),
 
-        ("init".to_string(), init)
+        ("init".to_string(), init),
+
+        ("update".to_string(), |s, _| {
+            let _ = fs::write("./.relic/upstream", s.serialise_state());
+        })
     ]);
     //
     
@@ -174,16 +178,16 @@ fn main() {
     //
 
     // get ignorance set
-    let ignore_set = IgnoreSet::create(fs::read_to_string(path.join(".bones_ignore")).unwrap_or("".to_string()));
+    let ignore_set = IgnoreSet::create(fs::read_to_string(path.join(".relic_ignore")).unwrap_or("".to_string()));
     //
 
     // get upstream
     // return error if not found
-    let upstream_state = match Bones::load(&path) {
+    let upstream_state = match Relic::load(&path) {
         Some(u) => { u },
         None => {
-            println!("Upstream does not exist, consider running 'bones init' instead.");
-            Bones::empty()
+            println!("Upstream does not exist, consider running 'relic init' instead.");
+            Relic::empty()
         }
     };
     //
@@ -194,7 +198,7 @@ fn main() {
 
             // println!("Upstream :\n{}", generate_tree(&upstream_state.upstream));
             // println!("Current :\n{}", generate_tree(&s));
-            // fs::write("./.bones/upstream", s.serialise_state());
+            // fs::write("./.relic/upstream", s.serialise_state());
 
             match commands.get(&arguments[1]) {
                 Some(c) => {

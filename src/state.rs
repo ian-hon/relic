@@ -1,7 +1,7 @@
 use std::fs;
 use serde::{Deserialize, Serialize};
 
-use crate::{content::{Content, Directory, File}, error::BonesError, ignore::IgnoreSet};
+use crate::{content::{Content, Directory, File}, error::RelicError, ignore::IgnoreSet};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct State {
@@ -23,7 +23,7 @@ impl State {
         }
     }
 
-    pub fn create(path: String, ignore_set: &IgnoreSet) -> Result<State, BonesError> {
+    pub fn create(path: String, ignore_set: &IgnoreSet) -> Result<State, RelicError> {
         let mut s = State::empty();
         match State::content_at(path.clone(), path, ignore_set)? {
             Content::Directory(d) => {
@@ -31,7 +31,7 @@ impl State {
                 Ok(s)
             },
             _ => {
-                Err(BonesError::ConfigurationIncorrect)
+                Err(RelicError::ConfigurationIncorrect)
             }
         }
 
@@ -39,7 +39,7 @@ impl State {
 
     }
 
-    pub fn content_at(file_name: String, root_path: String, ignore_set: &IgnoreSet) -> Result<Content, BonesError> {
+    pub fn content_at(file_name: String, root_path: String, ignore_set: &IgnoreSet) -> Result<Content, RelicError> {
         // println!("started at {root_path}");
 
         // get all files at path
@@ -47,7 +47,7 @@ impl State {
             Ok(r) => r,
             Err(e) => {
                 println!("state.rs (content_at) get all dirs : {root_path} : {e:?}");
-                return Err(BonesError::FileCantOpen);
+                return Err(RelicError::FileCantOpen);
             }
         };
 

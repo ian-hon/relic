@@ -44,19 +44,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "barebones-vcs"
-version = "0.1.0"
-dependencies = [
- "dotenv",
- "serde",
- "serde_json",
- "sha256",
- "similar",
- "strum",
- "strum_macros",
-]
-
-[[package]]
 name = "block-buffer"
 version = "0.10.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -198,6 +185,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1885c039570dc00dcb4ff087a89e185fd56bae234ddc7f056a945bf36467248d"
 dependencies = [
  "proc-macro2",
+]
+
+[[package]]
+name = "relic"
+version = "0.1.0"
+dependencies = [
+ "dotenv",
+ "serde",
+ "serde_json",
+ "sha256",
+ "similar",
+ "strum",
+ "strum_macros",
 ]
 
 [[package]]
