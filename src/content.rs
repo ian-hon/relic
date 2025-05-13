@@ -53,4 +53,15 @@ impl Directory {
             content: vec![]
         }
     }
+
+    pub fn deserialise(s: String) -> Option<Directory> {
+        match serde_json::from_str(&s) {
+            Ok(d) => Some(d),
+            _ => None
+        }
+    }
+
+    pub fn serialise(&self) -> String {
+        serde_json::to_string(&self).unwrap()
+    }
 }

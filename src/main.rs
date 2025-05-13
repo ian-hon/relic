@@ -15,9 +15,9 @@ mod stash;
 mod content;
 mod change;
 
+use clap::{arg, ArgMatches, Command};
 use relic::Relic;
 use change::Change;
-use content::File;
 use ignore::IgnoreSet;
 use utils::generate_tree;
 
@@ -44,102 +44,84 @@ use crate::state::State;
 //      resets to current head
 // cherry {commit hash}
 
-pub fn init(_: State, _: Vec<String>) {
+pub fn init(_: State, _: &ArgMatches) {
 
 }
 
-
-pub fn help(_: State, _: Vec<String>) {
-    println!(r#"This is the Relic Version Control System."#);
-}
-
-pub fn about(_: State, _: Vec<String>) {
-    println!(r#"This is the Relic Version Control System.
+fn main() {
+    // #region commands
+    // TODO : automate this
+    let command_handler = Command::new("relic")
+        .about(r#"This is the Relic Version Control System.
 
 The best way to learn is to stupidly and
 blindly reinvent the wheel.
 
-Relic is a simple
-hobby project, because remaking Git sounded
-fun and interesting.
+Relic is a simple hobby project, because
+remaking Git sounded fun and interesting.
 
-Most common features like adding,
-committing, pushing and pulling, are
-implemented."#);
-}
+Most common features like committing,
+pushing and pulling, are implemented."#)
+        .subcommand_required(true)
+        .arg_required_else_help(true)
+        .subcommand(
+            Command::new("commit")
+                .about("Commit current changes.")
+                .arg_required_else_help(true)
+                .arg(arg!(-m --message <MESSAGE> "Commit message").required(true))
+                .arg(arg!(-d --description <DESCRIPTION> "Commit description"))
+        )
+        .subcommand(
+            Command::new("init")
+                .about("Initialises a Relic repository in the current directory.")
+        )
+        .subcommand(
+            Command::new("push")
+                .about("Pushes local changes to remote.")
+        )
+        .subcommand(
+            Command::new("pull")
+                .about("Pull changes from remote to local.")
+        )
+        .subcommand(
+            Command::new("fetch")
+                .about("Check remote for new changes.")
+        )
+        .subcommand(
+            Command::new("branch")
+                .about("")
+        )
+        .subcommand(
+            Command::new("stash")
+                // pseudo-commits basically
+                // clear stash after a commit
+                // stash create
+                // stash view
+                // stash restore
+                // stash delete
+                .about("")
+        )
+        .subcommand(
+            Command::new("rollback")
+                .about("Discard all current changes. Rolls back to most recent commit (or pending commit).")
+        )
+        .subcommand(
+            Command::new("cherry")
+                .about("Go to specific commit.")
+        )
+        .subcommand(
+            Command::new("tree")
+                .about("Generate content tree of current directory.")
+        )
 
-fn main() {
-    // for change in Change::get_change(
-    //     "".to_string(),
-    //     &File { name: "".to_string(), content: fs::read_to_string("./lorem/mars").unwrap() },
-    //     &File { name: "".to_string(), content: fs::read_to_string("./lorem/earth").unwrap() })
-    // {
-    //     println!("{change:?}");
-    // }
-    // return;
+        .subcommand(
+            Command::new("update")
+                .about("DEBUG : updates stored state")
+        )
+    ;
 
-    // println!("{:?}", Change::get_change_container(
-    //     &Directory {
-    //         name: "test".to_string(),
-    //         content: vec![
-    //             Content::Directory(Directory {
-    //                 name: "dolor".to_string(),
-    //                 content: vec![]
-    //             }),
-    //             Content::Directory(Directory {
-    //                 name: "sit".to_string(),
-    //                 content: vec![
-    //                     Content::Directory(Directory {
-    //                         name: "new_dir".to_string(),
-    //                         content: vec![
-    //                             Content::File(File {
-    //                                 name: "smaller.txt".to_string(),
-    //                                 content: "".to_string()
-    //                             }),
-    //                         ]
-    //                     }),
-    //                 ]
-    //             }),
-    //             Content::File(File {
-    //                 name: "test.txt".to_string(),
-    //                 content: "".to_string()
-    //             })
-    //         ]
-    //     },
-    //    &Directory {
-    //         name: "test".to_string(),
-    //         content: vec![
-    //             Content::Directory(Directory {
-    //                 name: "sit".to_string(),
-    //                 content: vec![
-    //                     Content::Directory(Directory {
-    //                         name: "new_dir".to_string(),
-    //                         content: vec![
-    //                             Content::Directory(Directory {
-    //                                 name: "small".to_string(),
-    //                                 content: vec![]
-    //                             }),
-    //                             Content::File(File {
-    //                                 name: "smaller.txt".to_string(),
-    //                                 content: "".to_string()
-    //                             }),
-    //                         ]
-    //                     }),
-    //                 ]
-    //             }),
-    //             Content::File(File {
-    //                 name: "test.txt".to_string(),
-    //                 content: "".to_string()
-    //             }),
-    //         ]
-    //     },
-    //     Path::new("here")
-    // ));
-
-    // build all commands
-    type CommandType = fn(State, Vec<String>);
+    type CommandType = fn(State, &ArgMatches);
     let commands: HashMap<String, CommandType> = HashMap::from_iter::<Vec<(String, CommandType)>>(vec![
-        ("add".to_string(), add),
         ("commit".to_string(), commit),
         ("push".to_string(), push),
         ("pull".to_string(), pull),
@@ -149,8 +131,6 @@ fn main() {
         ("restore".to_string(), restore),
         ("rollback".to_string(), rollback),
         ("cherry".to_string(), cherry),
-        ("help".to_string(), help),
-        ("about".to_string(), about),
 
         ("tree".to_string(), |s, _| {
             println!("{}", generate_tree(&s));
@@ -162,16 +142,8 @@ fn main() {
             let _ = fs::write("./.relic/upstream", s.serialise_state());
         })
     ]);
-    //
+    // #endregion
     
-    // collect all arguments
-    let arguments = env::args().collect::<Vec<String>>();
-    if arguments.len() <= 1 {
-        help(State::empty(), vec![]);
-        return;
-    }
-    //
-
     // get current path
     // (used to be more complicated than this, but keeping it as a relative path just makes more sense now)
     let path = Path::new(".");
@@ -181,37 +153,21 @@ fn main() {
     let ignore_set = IgnoreSet::create(fs::read_to_string(path.join(".relic_ignore")).unwrap_or("".to_string()));
     //
 
-    // get upstream
-    // return error if not found
-    let upstream_state = match Relic::load(&path) {
-        Some(u) => { u },
-        None => {
-            println!("Upstream does not exist, consider running 'relic init' instead.");
-            Relic::empty()
-        }
-    };
-    //
-
     match State::create(".".to_string(), &ignore_set) {
         Ok(s) => {
-            println!("{}", Change::get_change_all(&upstream_state.upstream.current, &s.current, &path).serialise_changes());
-
-            // println!("Upstream :\n{}", generate_tree(&upstream_state.upstream));
-            // println!("Current :\n{}", generate_tree(&s));
-            // fs::write("./.relic/upstream", s.serialise_state());
-
-            match commands.get(&arguments[1]) {
-                Some(c) => {
-                    c(s, arguments[2..arguments.len()].to_vec());
+            let c = command_handler.get_matches();
+            let (command_name, sub_matches) = c.subcommand().unwrap();
+            match commands.get(command_name) {
+                Some(command) => {
+                    command(s, sub_matches);
                 },
                 None => {
-                    println!("Command not found.");
-                    help(State::empty(), vec![]);
+                    println!("Relic Error, command not defined.")
                 }
             }
         },
         Err(e) => {
-            println!("{e:?} error encountered.")
+            println!("{e:?} error encountered.");
         }
     }
 }

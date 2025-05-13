@@ -10,7 +10,7 @@ pub struct Change {
     pub modifications: Vec<Modification>
 }
 impl Change {
-    pub fn serialise_changes(self) -> String {
+    pub fn serialise_changes(&self) -> String {
 // + D "lorem/ipsum/dolor"
 // + F "lorem/ipsum/dolor/earth.txt" "earth.txt"
 // - D "lorem/sit"
@@ -24,7 +24,7 @@ impl Change {
         
         let mut result: Vec<String> = vec![];
 
-        for c_m in self.container_modifications {
+        for c_m in &self.container_modifications {
             result.push(
                 match c_m {
                     ContainerModification::CreateDirectory(p, n) => {
