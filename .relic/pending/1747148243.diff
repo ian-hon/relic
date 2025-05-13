@@ -1,0 +1,12 @@
+= LOCAL 1747148243 "added%20pending%20debug%20command" "" no_one
+=
+| "./src/main.rs"
++ 116 "\n"
+- 117
+- 118
++ 118 "            Command::new(\"pending\")\n"
++ 119 "                .about(\"DEBUG : view all pending changes\")\n"
+- 140
+- 141
++ 141 "        (\"pending\".to_string(), |s, _| {\n"
++ 142 "            println!(\"{}\", s.get_changes().serialise_changes())\n"

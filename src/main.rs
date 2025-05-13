@@ -114,9 +114,10 @@ pushing and pulling, are implemented."#)
                 .about("Generate content tree of current directory.")
         )
 
+
         .subcommand(
-            Command::new("update")
-                .about("DEBUG : updates stored state")
+            Command::new("pending")
+                .about("DEBUG : view all pending changes")
         )
     ;
 
@@ -138,8 +139,8 @@ pushing and pulling, are implemented."#)
 
         ("init".to_string(), init),
 
-        ("update".to_string(), |s, _| {
-            let _ = fs::write("./.relic/upstream", s.serialise_state());
+        ("pending".to_string(), |s, _| {
+            println!("{}", s.get_changes().serialise_changes())
         })
     ]);
     // #endregion
