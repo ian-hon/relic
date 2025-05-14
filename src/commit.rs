@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, path::PathBuf};
 
 use clap::ArgMatches;
 
@@ -27,8 +27,14 @@ impl Commit {
 }
 
 
-pub fn add(state: State, args: Vec<String>) {
+pub fn add(state: State, args: &ArgMatches) {
+    // let f: HashSet<String> = HashSet::from_iter(args.get_many::<String>("FILE").unwrap().map(|x| x.to_string()).collect::<Vec<String>>());
+    let f = args.get_many::<PathBuf>("FILE").unwrap().map(|x| x.clone()).collect::<Vec<PathBuf>>();
 
+    // f.difference(state.ignore_set);
+    for p in f {
+        println!("{p:?} : {}", p.is_dir());
+    }
 }
 
 pub fn commit(state: State, args: &ArgMatches) {
@@ -62,7 +68,7 @@ r#"= {commit id} {unix timestamp of commit} {message} {description} {author}
     state.pending_add(commit);
     // update upstream
     // TODO : only update added files, ignore the rest
-    state.update_upstream(HashSet::new());
+    state.update_upstream(&state.track_set);
 }
 
 pub fn push(state: State, args: &ArgMatches) {

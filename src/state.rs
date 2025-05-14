@@ -1,13 +1,15 @@
 use std::{collections::HashSet, fs, path::Path};
 use serde::{Deserialize, Serialize};
 
-use crate::{change::Change, commit::Commit, content::{Content, Directory, File}, error::RelicError, ignore::IgnoreSet};
+use crate::{change::Change, commit::Commit, content::{Content, Directory, File}, content_set::{ContentSet, IgnoreSet, TrackingSet}, error::RelicError};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct State {
     pub current: Directory,
     pub upstream: Directory,
-    pub path: String
+    pub path: String,
+    pub track_set: ContentSet,
+    pub ignore_set: ContentSet
 }
 
 impl State {
@@ -21,12 +23,16 @@ impl State {
                 name: "".to_string(),
                 content: vec![]
             },
-            path: "".to_string()
+            path: "".to_string(),
+            track_set: ContentSet::empty(),
+            ignore_set: ContentSet::empty()
         }
     }
 
-    pub fn create(path: String, ignore_set: &IgnoreSet) -> Result<State, RelicError> {
-        let current = match State::content_at(&path, &path, ignore_set)? {
+    pub fn create(path: String) -> Result<State, RelicError> {
+        let ignore_set = IgnoreSet::create(fs::read_to_string(".relic_ignore").unwrap_or("".to_string()));
+
+        let current = match State::content_at(&path, &path, &ignore_set)? {
             Content::Directory(d) => d,
             _ => return Err(RelicError::ConfigurationIncorrect)
         };
@@ -41,14 +47,24 @@ impl State {
             Err(_) => return Err(RelicError::FileCantOpen)
         };
 
+        let mut track_set: ContentSet = match fs::read_to_string(".relic/tracked") {
+            Ok(data) => TrackingSet::deserialise(data),
+            Err(_) => return Err(RelicError::ConfigurationIncorrect)
+        };
+
+        track_set.directories = HashSet::from_iter(track_set.directories.difference(&ignore_set.directories).map(|x| x.to_string()));
+        track_set.files = HashSet::from_iter(track_set.files.difference(&ignore_set.files).map(|x| x.to_string()));
+
         Ok(State {
             current,
             upstream,
-            path
+            path,
+            track_set,
+            ignore_set
         })
     }
 
-    pub fn content_at(file_name: &String, root_path: &String, ignore_set: &IgnoreSet) -> Result<Content, RelicError> {
+    pub fn content_at(file_name: &String, root_path: &String, ignore_set: &ContentSet) -> Result<Content, RelicError> {
         // get all files at path
         let paths = match fs::read_dir(format!("./{}", root_path.clone())) {
             Ok(r) => r,
@@ -73,7 +89,7 @@ impl State {
                     }
 
                     if file_type.is_dir() {
-                        if ignore_set.dir_ignore.contains(&file_name) {
+                        if ignore_set.directories.contains(&file_name) {
                             continue;
                         }
 
@@ -86,7 +102,7 @@ impl State {
                             }
                         }
                     } else if file_type.is_file() {
-                        if ignore_set.file_ignore.contains(&file_name) {
+                        if ignore_set.files.contains(&file_name) {
                             continue;
                         }
 
@@ -98,7 +114,7 @@ impl State {
                         }
                     } else if file_type.is_symlink() {
                         // TODO : decide what to do here
-                        if ignore_set.file_ignore.contains(&file_name) {
+                        if ignore_set.files.contains(&file_name) {
                             continue;
                         }
                     }
@@ -131,9 +147,11 @@ impl State {
     }
 
     // #region upstream
-    pub fn update_upstream(&self, to_update: HashSet<String>) {
+    pub fn update_upstream(&self, to_update: &ContentSet) {
         // replaces upstream with current directory
         // TODO : implement to_update
+
+        
 
         let _ = fs::write(".relic/upstream", self.current.serialise());
     }

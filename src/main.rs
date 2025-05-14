@@ -1,9 +1,9 @@
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::{collections::HashMap, env};
 
 mod error;
-mod ignore;
+mod content_set;
 mod state;
 mod utils;
 
@@ -15,10 +15,10 @@ mod stash;
 mod content;
 mod change;
 
-use clap::{arg, ArgMatches, Command};
+use clap::{arg, value_parser, ArgMatches, Command};
 use relic::Relic;
 use change::Change;
-use ignore::IgnoreSet;
+use content_set::ContentSet;
 use utils::generate_tree;
 
 use crate::commit::{add, commit, push, pull, fetch, cherry, rollback};
@@ -65,15 +65,26 @@ pushing and pulling, are implemented."#)
         .subcommand_required(true)
         .arg_required_else_help(true)
         .subcommand(
+            Command::new("init")
+                .about("Initialises a Relic repository in the current directory.")
+        )
+
+        .subcommand(
+            Command::new("add")
+                .about("Adds a file to staging")
+                .arg_required_else_help(true)
+                .arg(
+                    arg!([FILE]... "File to add (* for all)")
+                    .required(true)
+                    .value_parser(value_parser!(PathBuf))
+                )
+        )
+        .subcommand(
             Command::new("commit")
                 .about("Commit current changes.")
                 .arg_required_else_help(true)
                 .arg(arg!(-m --message <MESSAGE> "Commit message").required(true))
                 .arg(arg!(-d --description <DESCRIPTION> "Commit description"))
-        )
-        .subcommand(
-            Command::new("init")
-                .about("Initialises a Relic repository in the current directory.")
         )
         .subcommand(
             Command::new("push")
@@ -116,45 +127,39 @@ pushing and pulling, are implemented."#)
 
 
         .subcommand(
-            Command::new("pending")
-                .about("DEBUG : view all pending changes")
+            Command::new("staging")
+                .about("DEBUG : view all staging changes")
         )
     ;
 
     type CommandType = fn(State, &ArgMatches);
     let commands: HashMap<String, CommandType> = HashMap::from_iter::<Vec<(String, CommandType)>>(vec![
+        // TODO : pass user credentials into commands too
+        ("init".to_string(), init),
+
+        ("add".to_string(), add),
         ("commit".to_string(), commit),
         ("push".to_string(), push),
         ("pull".to_string(), pull),
         ("fetch".to_string(), fetch),
+
         ("branch".to_string(), branch),
         ("stash".to_string(), stash),
         ("restore".to_string(), restore),
+
         ("rollback".to_string(), rollback),
         ("cherry".to_string(), cherry),
 
         ("tree".to_string(), |s, _| {
             println!("{}", generate_tree(&s));
         }),
-
-        ("init".to_string(), init),
-
-        ("pending".to_string(), |s, _| {
-            println!("{}", s.get_changes().serialise_changes())
+        ("staging".to_string(), |s, _| {
+            println!("{}", s.get_changes().serialise_changes());
         })
     ]);
     // #endregion
-    
-    // get current path
-    // (used to be more complicated than this, but keeping it as a relative path just makes more sense now)
-    let path = Path::new(".");
-    //
 
-    // get ignorance set
-    let ignore_set = IgnoreSet::create(fs::read_to_string(path.join(".relic_ignore")).unwrap_or("".to_string()));
-    //
-
-    match State::create(".".to_string(), &ignore_set) {
+    match State::create(".".to_string()) {
         Ok(s) => {
             let c = command_handler.get_matches();
             let (command_name, sub_matches) = c.subcommand().unwrap();
