@@ -1,4 +1,4 @@
-use std::{collections::HashSet, fs, path::Path};
+use std::{collections::HashSet, fs, path::{Path, PathBuf}};
 use serde::{Deserialize, Serialize};
 
 use crate::{change::Change, commit::Commit, content::{Content, Directory, File}, content_set::{ContentSet, IgnoreSet, TrackingSet}, error::RelicError};
@@ -7,7 +7,7 @@ use crate::{change::Change, commit::Commit, content::{Content, Directory, File},
 pub struct State {
     pub current: Directory,
     pub upstream: Directory,
-    pub path: String,
+    pub path: PathBuf,
     pub track_set: ContentSet,
     pub ignore_set: ContentSet
 }
@@ -15,24 +15,18 @@ pub struct State {
 impl State {
     pub fn empty() -> State {
         State {
-            current: Directory {
-                name: "".to_string(),
-                content: vec![]
-            },
-            upstream: Directory {
-                name: "".to_string(),
-                content: vec![]
-            },
-            path: "".to_string(),
+            current: Directory::new(),
+            upstream: Directory::new(),
+            path: PathBuf::from(""),
             track_set: ContentSet::empty(),
             ignore_set: ContentSet::empty()
         }
     }
 
-    pub fn create(path: String) -> Result<State, RelicError> {
+    pub fn create(path: PathBuf) -> Result<State, RelicError> {
         let ignore_set = IgnoreSet::create(fs::read_to_string(".relic_ignore").unwrap_or("".to_string()));
 
-        let current = match State::content_at(&path, &path, &ignore_set)? {
+        let current = match State::content_at(&path.to_string_lossy().to_string(), &path, &ignore_set)? {
             Content::Directory(d) => d,
             _ => return Err(RelicError::ConfigurationIncorrect)
         };
@@ -64,12 +58,13 @@ impl State {
         })
     }
 
-    pub fn content_at(file_name: &String, root_path: &String, ignore_set: &ContentSet) -> Result<Content, RelicError> {
+    pub fn content_at(file_name: &String, root_path: &PathBuf, ignore_set: &ContentSet) -> Result<Content, RelicError> {
         // get all files at path
-        let paths = match fs::read_dir(format!("./{}", root_path.clone())) {
+        let paths = match fs::read_dir(root_path) {
+        // let paths = match fs::read_dir(format!("./{}", root_path.clone())) {
             Ok(r) => r,
             Err(e) => {
-                println!("state.rs (content_at) get all dirs : {root_path} : {e:?}");
+                println!("state.rs (content_at) get all dirs : {root_path:?} : {e:?}");
                 return Err(RelicError::FileCantOpen);
             }
         };
@@ -82,7 +77,7 @@ impl State {
                 Ok(p) => {
                     let file_type = p.file_type().unwrap();
                     let file_name = p.file_name().into_string().unwrap();
-                    let file_path = p.path().to_string_lossy().to_string();
+                    let file_path = p.path();
 
                     if file_name.starts_with(".") {
                         continue;
@@ -125,7 +120,9 @@ impl State {
             }
         }
 
+        // println!("CREATION : {root_path:?}");
         Ok(Content::Directory(Directory {
+            path: root_path.clone(),
             name: file_name.clone(),
             content: directory_contents
         }))
@@ -142,16 +139,16 @@ impl State {
         }
     }
 
+    // #region changes
     pub fn get_changes(&self) -> Change {
         Change::get_change_all(&self.upstream, &self.current, Path::new(&self.path))
     }
+    // #endregion
 
     // #region upstream
     pub fn update_upstream(&self, to_update: &ContentSet) {
         // replaces upstream with current directory
         // TODO : implement to_update
-
-        
 
         let _ = fs::write(".relic/upstream", self.current.serialise());
     }

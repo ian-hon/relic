@@ -16,9 +16,10 @@ mod content;
 mod change;
 
 use clap::{arg, value_parser, ArgMatches, Command};
+use content::Content;
 use relic::Relic;
 use change::Change;
-use content_set::ContentSet;
+use content_set::{ContentSet, IgnoreSet};
 use utils::generate_tree;
 
 use crate::commit::{add, commit, push, pull, fetch, cherry, rollback};
@@ -49,6 +50,21 @@ pub fn init(_: State, _: &ArgMatches) {
 }
 
 fn main() {
+    // let _ = fs::write(
+    //     ".relic/upstream",
+    //     match State::content_at(
+    //         &"".to_string(),
+    //         &PathBuf::from("."),
+    //         &IgnoreSet::create("target/".to_string())
+    //     ).unwrap() {
+    //         content::Content::Directory(d) => {
+    //             d.serialise()
+    //         },
+    //         _ => panic!()
+    //     }
+    // );
+    // return;
+
     // #region commands
     // TODO : automate this
     let command_handler = Command::new("relic")
@@ -128,7 +144,12 @@ pushing and pulling, are implemented."#)
 
         .subcommand(
             Command::new("staging")
-                .about("DEBUG : view all staging changes")
+                .about("View all staging changes")
+        )
+
+        .subcommand(
+            Command::new("test")
+                .about("test")
         )
     ;
 
@@ -151,15 +172,19 @@ pushing and pulling, are implemented."#)
         ("cherry".to_string(), cherry),
 
         ("tree".to_string(), |s, _| {
-            println!("{}", generate_tree(&s));
+            println!("{}", generate_tree(&s.current));
         }),
         ("staging".to_string(), |s, _| {
             println!("{}", s.get_changes().serialise_changes());
+        }),
+
+        ("test".to_string(), |mut s, _| {
+            s.upstream.apply_changes(s.get_changes());
         })
     ]);
     // #endregion
 
-    match State::create(".".to_string()) {
+    match State::create(PathBuf::from(".")) {
         Ok(s) => {
             let c = command_handler.get_matches();
             let (command_name, sub_matches) = c.subcommand().unwrap();
@@ -173,7 +198,7 @@ pushing and pulling, are implemented."#)
             }
         },
         Err(e) => {
-            println!("{e:?} error encountered.");
+            println!("main.rs (main) {e:?} error encountered.");
         }
     }
 }

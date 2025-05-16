@@ -1,6 +1,6 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::{content::Content, state::State};
+use crate::{content::{Content, Directory}, state::State};
 
 pub fn get_value(args: &Vec<String>, key: &str) -> Option<String> {
     for (index, i) in args.iter().enumerate() {
@@ -12,8 +12,8 @@ pub fn get_value(args: &Vec<String>, key: &str) -> Option<String> {
     None
 }
 
-pub fn generate_tree(state: &State) -> String {
-    return fetch_contents(&Content::Directory(state.current.clone()));
+pub fn generate_tree(dir: &Directory) -> String {
+    return fetch_contents(&Content::Directory(dir.clone()));
 }
 
 fn fetch_contents(c: &Content) -> String {

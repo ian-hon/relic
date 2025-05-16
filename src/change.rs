@@ -1,10 +1,11 @@
 use std::{collections::{HashMap, HashSet}, path::Path};
 
+use serde::{Deserialize, Serialize};
 use similar::{ChangeTag, TextDiff};
 
 use crate::content::{Content, Directory, File};
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Change {
     pub container_modifications: Vec<ContainerModification>,
     pub modifications: Vec<Modification>
@@ -267,9 +268,40 @@ impl Change {
             modifications
         }
     }
+
+    pub fn as_map(&self) -> (HashMap<String, Vec<ContainerModification>>, HashMap<String, HashMap<String, Vec<Modification>>>) {
+        let mut c_mod_map = HashMap::new();
+        for container_modification in &self.container_modifications {
+            let path = match container_modification {
+                ContainerModification::CreateDirectory(path, _) => path.clone(),
+                ContainerModification::DeleteDirectory(path, _) => path.clone(),
+                ContainerModification::CreateFile(path, _) => path.clone(),
+                ContainerModification::DeleteFile(path, _) => path.clone()
+            };
+
+            c_mod_map.entry(path).or_insert(vec![]).push(container_modification.clone());
+        }
+
+        let mut mod_map = HashMap::new();
+        for modification in &self.modifications {
+            let (parent_directory, file_name) = match modification {
+                Modification::Create(path, name, _, _) => (path.clone(), name.clone()),
+                Modification::Delete(path, name, _) => (path.clone(), name.clone())
+            };
+            mod_map
+                .entry(parent_directory)
+                .or_insert(HashMap::new())
+
+                .entry(file_name)
+                .or_insert(vec![])
+                .push(modification.clone());
+        }
+
+        (c_mod_map, mod_map)
+    }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Modification {
     // creation/deletion of lines in files
     Create(
@@ -285,8 +317,10 @@ pub enum Modification {
     )
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ContainerModification {
+    // denote that parent doesnt exist?
+    
     // creation/deletion of files & folders
     CreateDirectory(
         String, // parent directory
