@@ -28,16 +28,16 @@ impl Change {
             result.push(
                 match c_m {
                     ContainerModification::CreateDirectory(p, n) => {
-                        format!("+ D {p:?} {n:?}")
+                        format!("+ D {} {}", urlencoding::encode(p).to_string(), urlencoding::encode(n).to_string())
                     },
-                    ContainerModification::DeleteDirectory(p) => {
-                        format!("- D {p:?}")
+                    ContainerModification::DeleteDirectory(p, n) => {
+                        format!("- D {} {}", urlencoding::encode(p).to_string(), urlencoding::encode(n).to_string())
                     },
                     ContainerModification::CreateFile(p, n) => {
-                        format!("+ F {p:?} {n:?}")
+                        format!("+ F {} {}", urlencoding::encode(p).to_string(), urlencoding::encode(n).to_string())
                     },
-                    ContainerModification::DeleteFile(p) => {
-                        format!("- F {p:?}")
+                    ContainerModification::DeleteFile(p, n) => {
+                        format!("- F {} {}", urlencoding::encode(p).to_string(), urlencoding::encode(n).to_string())
                     }
                 }
             );
@@ -48,14 +48,14 @@ impl Change {
         let mut map = HashMap::new();
         for modification in &self.modifications {
             let path = match modification {
-                Modification::Create(path, _, _, _) => path.clone(),
-                Modification::Delete(path, _, _) => path.clone()
+                Modification::Create(path, name, _, _) => (path.clone(), name.clone()),
+                Modification::Delete(path, name, _) => (path.clone(), name.clone())
             };
             map.entry(path).or_insert(vec![]).push(modification.clone());
         }
 
-        for (path, modifications) in map {
-            result.push(format!("| {path:?}"));
+        for ((path, name), modifications) in map {
+            result.push(format!("| {} {}", urlencoding::encode(&path).to_string(), urlencoding::encode(&name).to_string()));
             for m in modifications {
                 result.push(
                     match m {
@@ -163,18 +163,17 @@ impl Change {
         let mut modifications = vec![];
         for (dir_name, is_file) in deleted {
             if is_file {
-                container_modifications.push(ContainerModification::DeleteFile(path.join(dir_name.clone()).to_string_lossy().to_string()));
+                container_modifications.push(ContainerModification::DeleteFile(path.to_string_lossy().to_string(), dir_name));
             } else {
-                let p = path.join(dir_name.clone());
-                container_modifications.push(ContainerModification::DeleteDirectory(p.to_string_lossy().to_string()));
+                container_modifications.push(ContainerModification::DeleteDirectory(path.to_string_lossy().to_string(), dir_name.clone()));
                 // traverse all children, add them to result as well
                 let mut changes = Change::get_change_all(
-                    match upstream_map.get(&(dir_name, false)).unwrap() {
+                    match upstream_map.get(&(dir_name.clone(), false)).unwrap() {
                         Content::Directory(deleted_d) => { deleted_d },
                         _ => panic!()
                     },
                     &Directory::new(),
-                    &p
+                    &path.join(dir_name.clone())
                 );
                 container_modifications.append(&mut changes.container_modifications);
                 modifications.append(&mut changes.modifications);
@@ -186,24 +185,30 @@ impl Change {
         // for all created directories, log them and do the same for all children
         for (dir_name, is_file) in created {
             if is_file {
-                let p = path.join(dir_name.clone()).to_string_lossy().to_string();
-                container_modifications.push(ContainerModification::CreateFile(p.clone(), dir_name.clone()));
+                // let p = path.join(dir_name.clone()).to_string_lossy().to_string();
+                container_modifications.push(ContainerModification::CreateFile(path.to_string_lossy().to_string(), dir_name.clone()));
                 // Modification::Create here
-                modifications.append(&mut Change::get_change(p, &File::new(), match current_map.get(&(dir_name, true)).unwrap() {
-                    Content::File(f) => { f },
-                    _ => panic!()
-                }))
+                modifications.append(
+                    &mut Change::get_change(
+                        path.to_string_lossy().to_string(),
+                        &File::new(),
+                        match current_map.get(&(dir_name, true)).unwrap() {
+                            Content::File(f) => { f },
+                            _ => panic!()
+                        }
+                    )
+                )
             } else {
-                let p = path.join(dir_name.clone());
-                container_modifications.push(ContainerModification::CreateDirectory(p.to_string_lossy().to_string(), dir_name.clone()));
+                // let p = path.join(dir_name.clone());
+                container_modifications.push(ContainerModification::CreateDirectory(path.to_string_lossy().to_string(), dir_name.clone()));
 
                 let mut changes = Change::get_change_all(
                     &Directory::new(),
-                    match current_map.get(&(dir_name, false)).unwrap() {
+                    match current_map.get(&(dir_name.clone(), false)).unwrap() {
                         Content::Directory(d) => d,
                         _ => panic!()
                     },
-                    &p
+                    &path.join(dir_name.clone())
                 );
                 container_modifications.append(&mut changes.container_modifications);
                 modifications.append(&mut changes.modifications);
@@ -246,7 +251,13 @@ impl Change {
                         None => { continue; }
                     };
 
-                    modifications.append(&mut Change::get_change(path.join(f.name.clone()).to_string_lossy().to_string(), &upstream_file, &f));
+                    modifications.append(
+                        &mut Change::get_change(
+                            path.to_string_lossy().to_string(),
+                            &upstream_file,
+                            &f
+                        )
+                    );
                 }
             }
         }
@@ -262,13 +273,13 @@ impl Change {
 pub enum Modification {
     // creation/deletion of lines in files
     Create(
-        String, // path
+        String, // parent directory
         String, // file name
         usize, // line
         String // text
     ),
     Delete(
-        String, // path
+        String, // parent directory
         String, // file name
         usize // line
     )
@@ -277,20 +288,21 @@ pub enum Modification {
 #[derive(Debug)]
 pub enum ContainerModification {
     // creation/deletion of files & folders
-    // TODO : change so only path needed
     CreateDirectory(
-        String, // path
+        String, // parent directory
         String // name
     ),
     DeleteDirectory(
-        String // path
+        String, // parent directory
+        String // name
     ),
 
     CreateFile(
-        String, // path
+        String, // parent directory
         String // name
     ),
     DeleteFile(
-        String, // path
+        String, // parent directory
+        String // name
     )
 }
