@@ -19,7 +19,7 @@ use clap::{arg, value_parser, ArgMatches, Command};
 use content::Content;
 use relic::Relic;
 use change::Change;
-use content_set::{ContentSet, IgnoreSet};
+use content_set::{ContentSet, IgnoreSet, TrackingSet};
 use utils::generate_tree;
 
 use crate::commit::{add, commit, push, pull, fetch, cherry, rollback};
@@ -45,7 +45,7 @@ use crate::state::State;
 //      resets to current head
 // cherry {commit hash}
 
-pub fn init(_: State, _: &ArgMatches) {
+pub fn init(_: &mut State, _: &ArgMatches) {
 
 }
 
@@ -64,6 +64,21 @@ fn main() {
     //     }
     // );
     // return;
+
+//     let mut f = content::File {
+//         name: "".to_string(),
+//         content: r#"lorem
+// ipsum
+// dolor
+// sit
+// amet"#.to_string()
+//     };
+
+//     f.apply_changes(&vec![
+//         change::Modification::Create("".to_string(), "".to_string(), 1, "something here".to_string())
+//     ]);
+
+//     return;
 
     // #region commands
     // TODO : automate this
@@ -153,7 +168,7 @@ pushing and pulling, are implemented."#)
         )
     ;
 
-    type CommandType = fn(State, &ArgMatches);
+    type CommandType = fn(&mut State, &ArgMatches);
     let commands: HashMap<String, CommandType> = HashMap::from_iter::<Vec<(String, CommandType)>>(vec![
         // TODO : pass user credentials into commands too
         ("init".to_string(), init),
@@ -175,22 +190,22 @@ pushing and pulling, are implemented."#)
             println!("{}", generate_tree(&s.current));
         }),
         ("staging".to_string(), |s, _| {
-            println!("{}", s.get_changes().serialise_changes());
+            println!("{}", s.get_changes().filter_changes(&s.track_set.initialise(&mut s.current)).serialise_changes());
         }),
 
-        ("test".to_string(), |mut s, _| {
+        ("test".to_string(), |s, _| {
             s.upstream.apply_changes(s.get_changes());
         })
     ]);
     // #endregion
 
     match State::create(PathBuf::from(".")) {
-        Ok(s) => {
+        Ok(mut s) => {
             let c = command_handler.get_matches();
             let (command_name, sub_matches) = c.subcommand().unwrap();
             match commands.get(command_name) {
                 Some(command) => {
-                    command(s, sub_matches);
+                    command(&mut s, sub_matches);
                 },
                 None => {
                     println!("Relic Error, command not defined.")

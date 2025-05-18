@@ -1,4 +1,4 @@
-use std::{collections::HashSet, path::PathBuf};
+use std::{collections::HashSet, fs, path::PathBuf};
 
 use clap::ArgMatches;
 
@@ -27,17 +27,27 @@ impl Commit {
 }
 
 
-pub fn add(state: State, args: &ArgMatches) {
-    // let f: HashSet<String> = HashSet::from_iter(args.get_many::<String>("FILE").unwrap().map(|x| x.to_string()).collect::<Vec<String>>());
+pub fn add(_: &mut State, args: &ArgMatches) {
     let f = args.get_many::<PathBuf>("FILE").unwrap().map(|x| x.clone()).collect::<Vec<PathBuf>>();
 
-    // f.difference(state.ignore_set);
+    let mut result = fs::read_to_string("./.relic/tracked").unwrap().split("\n").map(|x| x.to_string()).collect::<Vec<String>>();
     for p in f {
-        println!("{p:?} : {}", p.is_dir());
+        // TODO : path.join for this? or concatenating / works?
+        result.push(format!("{}{}", p.to_string_lossy().to_string(), if !p.to_string_lossy().to_string().ends_with("/") && p.is_dir() { "/" } else { "" }));
     }
+    let _ = fs::write("./.relic/tracked",
+        HashSet::<String>::from_iter(
+            result
+            .into_iter()
+            .filter(|x| !x.is_empty())
+        )
+        .drain()
+        .collect::<Vec<String>>()
+        .join("\n")
+    );
 }
 
-pub fn commit(state: State, args: &ArgMatches) {
+pub fn commit(state: &mut State, args: &ArgMatches) {
     // push into pending stage
     // update upstream
 
@@ -65,28 +75,27 @@ r#"= {commit id} {unix timestamp of commit} {message} {description} {author}
         author: "no_one".to_string()
     };
 
-    state.pending_add(commit);
+    // state.pending_add(commit);
     // update upstream
-    // TODO : only update added files, ignore the rest
-    state.update_upstream(&state.track_set);
+    (*state).update_upstream(&mut state.track_set.clone());
 }
 
-pub fn push(state: State, args: &ArgMatches) {
-
-}
-
-pub fn pull(state: State, args: &ArgMatches) {
+pub fn push(state: &mut State, args: &ArgMatches) {
 
 }
 
-pub fn fetch(state: State, args: &ArgMatches) {
+pub fn pull(state: &mut State, args: &ArgMatches) {
 
 }
 
-pub fn cherry(state: State, args: &ArgMatches) {
+pub fn fetch(state: &mut State, args: &ArgMatches) {
+
+}
+
+pub fn cherry(state: &mut State, args: &ArgMatches) {
     
 }
 
-pub fn rollback(state: State, args: &ArgMatches) {
+pub fn rollback(state: &mut State, args: &ArgMatches) {
 
 }

@@ -1,8 +1,10 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, path::PathBuf, sync::{Arc, Mutex}};
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug)]
+use crate::content::{Content, Directory};
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ContentSet {
     pub directories: HashSet<String>,
     pub files: HashSet<String>
@@ -60,6 +62,7 @@ impl IgnoreSet for ContentSet {
 
 pub trait TrackingSet {
     fn deserialise(content: String) -> Self;
+    fn initialise(&self, d: &mut Directory) -> Self;
 }
 impl TrackingSet for ContentSet {
     fn deserialise(content: String) -> Self {
@@ -75,6 +78,32 @@ impl TrackingSet for ContentSet {
             }
         }
 
+        result
+    }
+
+    fn initialise(&self, d: &mut Directory) -> ContentSet {
+        let tracked_mutex = Arc::new(Mutex::new(self.clone()));
+        d.traverse(PathBuf::from("."), &|path, _, current| {
+            let mut tracked_unlock = tracked_mutex.lock().unwrap();
+
+            match current {
+                Content::Directory(d) => {
+                    // if parent in set
+                    // add to content set
+                    if tracked_unlock.directories.contains(&d.path.parent().unwrap().to_string_lossy().to_string()) {
+                        tracked_unlock.directories.insert(d.path.to_string_lossy().to_string());
+                    }
+                },
+                Content::File(f) => {
+                    if tracked_unlock.directories.contains(&path.to_string_lossy().to_string()) {
+                        tracked_unlock.files.insert(path.join(&f.name).to_string_lossy().to_string());
+                    }
+                }
+            }
+        });
+
+        // dont ask me
+        let result = tracked_mutex.lock().unwrap().clone();
         result
     }
 }

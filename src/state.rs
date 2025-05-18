@@ -1,7 +1,7 @@
-use std::{collections::HashSet, fs, path::{Path, PathBuf}};
+use std::{collections::HashSet, fs, path::{Path, PathBuf}, sync::{Arc, Mutex}};
 use serde::{Deserialize, Serialize};
 
-use crate::{change::Change, commit::Commit, content::{Content, Directory, File}, content_set::{ContentSet, IgnoreSet, TrackingSet}, error::RelicError};
+use crate::{change::{Change, ContainerModification, Modification}, commit::Commit, content::{Content, Directory, File}, content_set::{ContentSet, IgnoreSet, TrackingSet}, error::RelicError};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct State {
@@ -46,8 +46,8 @@ impl State {
             Err(_) => return Err(RelicError::ConfigurationIncorrect)
         };
 
-        track_set.directories = HashSet::from_iter(track_set.directories.difference(&ignore_set.directories).map(|x| x.to_string()));
-        track_set.files = HashSet::from_iter(track_set.files.difference(&ignore_set.files).map(|x| x.to_string()));
+        track_set.directories = HashSet::from_iter(track_set.directories.difference(&ignore_set.directories).map(|x| PathBuf::from(".").join(PathBuf::from(x)).to_string_lossy().to_string()));
+        track_set.files = HashSet::from_iter(track_set.files.difference(&ignore_set.files).map(|x| PathBuf::from(".").join(PathBuf::from(x)).to_string_lossy().to_string()));
 
         Ok(State {
             current,
@@ -146,11 +146,48 @@ impl State {
     // #endregion
 
     // #region upstream
-    pub fn update_upstream(&self, to_update: &ContentSet) {
-        // replaces upstream with current directory
-        // TODO : implement to_update
+    pub fn update_upstream(&mut self, tracked_content: &ContentSet) {
+        // fully fill tracked_content
+        // eg : "lorem/" -> ["lorem/ipsum", "lorem/dolor", "lorem/sit"]
+        // traverse directories and fetch all children
 
-        let _ = fs::write(".relic/upstream", self.current.serialise());
+        // let tracked_mutex = Arc::new(Mutex::new(tracked_content.clone()));
+        // self.current.traverse(PathBuf::from("."), &|path, _, current| {
+        //     let mut tracked_unlock = tracked_mutex.lock().unwrap();
+
+        //     match current {
+        //         Content::Directory(d) => {
+        //             // if parent in set
+        //             // add to content set
+        //             if tracked_unlock.directories.contains(&d.path.parent().unwrap().to_string_lossy().to_string()) {
+        //                 tracked_unlock.directories.insert(d.path.to_string_lossy().to_string());
+        //             }
+        //         },
+        //         Content::File(f) => {
+        //             if tracked_unlock.directories.contains(&path.to_string_lossy().to_string()) {
+        //                 tracked_unlock.files.insert(path.join(&f.name).to_string_lossy().to_string());
+        //             }
+        //         }
+        //     }
+        // });
+
+        // let tracked_content = tracked_mutex.lock().unwrap().clone();
+
+        let tracked_content = tracked_content.clone();
+        tracked_content.initialise(&mut self.current);
+
+        // get changes
+        // filter to only changes in the tracked_content content set
+        let changes = self.get_changes().filter_changes(&tracked_content);
+
+        println!("{}", changes.serialise_changes());
+
+        // apply changes to current
+        self.current.apply_changes(changes);
+        // replace upstream with current
+        self.upstream = self.current.clone(); // expensive?
+
+        // let _ = fs::write(".relic/upstream", self.current.serialise());
     }
     // #endregion
 

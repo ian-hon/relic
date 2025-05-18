@@ -1,11 +1,11 @@
-use std::{collections::{HashMap, HashSet}, path::Path};
+use std::{collections::{HashMap, HashSet}, path::{Path, PathBuf}};
 
 use serde::{Deserialize, Serialize};
 use similar::{ChangeTag, TextDiff};
 
-use crate::content::{Content, Directory, File};
+use crate::{content::{Content, Directory, File}, content_set::ContentSet};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Change {
     pub container_modifications: Vec<ContainerModification>,
     pub modifications: Vec<Modification>
@@ -105,7 +105,7 @@ impl Change {
                         path.clone(),
                         current_file.name.clone(),
                         change.new_index().unwrap(),
-                        change.to_string()
+                        change.to_string().strip_suffix("\n").unwrap().to_string()
                     ),
                     _ => panic!()
                 }
@@ -270,6 +270,9 @@ impl Change {
     }
 
     pub fn as_map(&self) -> (HashMap<String, Vec<ContainerModification>>, HashMap<String, HashMap<String, Vec<Modification>>>) {
+        // c_mod_map: map<parent_directory, Vec<changes>>
+        // mod_map: map<parent_directory, map<file_name, Vec<changes>>>
+
         let mut c_mod_map = HashMap::new();
         for container_modification in &self.container_modifications {
             let path = match container_modification {
@@ -298,6 +301,37 @@ impl Change {
         }
 
         (c_mod_map, mod_map)
+    }
+
+    pub fn filter_changes(&self, filter: &ContentSet) -> Change {
+        Change {
+            container_modifications: self.container_modifications
+                .clone()
+                .into_iter()
+                .filter(|c_mod|
+                    filter.directories.contains(&
+                        match c_mod {
+                            ContainerModification::CreateFile(p, n) => { PathBuf::from(p).join(n).to_string_lossy().to_string() },
+                            ContainerModification::DeleteFile(p, n) => { PathBuf::from(p).join(n).to_string_lossy().to_string() },
+                            ContainerModification::CreateDirectory(p, n) => { PathBuf::from(p).join(n).to_string_lossy().to_string() },
+                            ContainerModification::DeleteDirectory(p, n) => { PathBuf::from(p).join(n).to_string_lossy().to_string() },
+                        }
+                    )
+                )
+                .collect(),
+            modifications: self.modifications
+                .clone()
+                .into_iter()
+                .filter(|m|
+                    filter.files.contains(&
+                        match m {
+                            Modification::Create(p, n, _, _) => PathBuf::from(p).join(n).to_string_lossy().to_string(),
+                            Modification::Delete(p, n, _) => PathBuf::from(p).join(n).to_string_lossy().to_string(),
+                        }
+                    )
+                )
+                .collect()
+        }
     }
 }
 

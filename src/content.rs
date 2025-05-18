@@ -1,4 +1,4 @@
-use std::{collections::{HashMap, HashSet}, fs, path::{Path, PathBuf}};
+use std::{collections::{HashMap, HashSet}, fs, path::{Path, PathBuf}, sync::Arc};
 
 use serde::{Deserialize, Serialize};
 
@@ -38,6 +38,30 @@ impl File {
             }
         }
     }
+
+    pub fn apply_changes(&mut self, modifications: &Vec<Modification>) {
+        // TODO : investigate whether an additional newline is added to eof
+        let mut lines = self.content.split("\n").map(|x| x.to_string()).collect::<Vec<String>>();
+
+        // println!("({}) BEFORE : {}\n{}", self.name, sha256::digest(&self.content), self.content);
+
+        for m in modifications {
+            match m {
+                Modification::Create(_, _, line, content) => {
+                    // insert at that line
+                    lines.insert(*line, content.clone());
+                },
+                Modification::Delete(_, _, line) => {
+                    // delete that line
+                    lines.remove(*line);
+                }
+            }
+        }
+
+        self.content = lines.join("\n");
+
+        // println!("({}) AFTER : {}\n{}", self.name, sha256::digest(&self.content), self.content);
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -72,9 +96,14 @@ impl Directory {
 
         // println!("{}", serde_json::to_string_pretty(&self).unwrap().to_string());
 
-        println!("{}", utils::generate_tree(&self));
+        // println!("{}", utils::generate_tree(&self));
 
-        self.traverse(PathBuf::from("."), &c_mod_map, &mod_map, |path, parent, current, c_mod_map, mod_map| {
+        // two pass
+        // create/delete containers, then create/delete file content
+
+        self.traverse(
+            PathBuf::from("."),
+            &|_, _, current| {
             match current {
                 Content::Directory(d) => {
                     // somehow denote that the parent does not yet exist,
@@ -112,35 +141,33 @@ impl Directory {
                             .map(|x| x.clone())
                             .collect::<Vec<Content>>();
                     }
-
-
-                    // match c_mod_map.get(&path.to_string_lossy().to_string()) {
-                    //     Some(c_m) => {
-                    //         println!("C_M : {c_m:?}");
-                    //         for c_mod in c_m {
-                    //             let (parent_directory, container_name) = match c_mod {
-                    //                 ContainerModification::CreateFile(p, n) => (p, n),
-                    //                 ContainerModification::CreateDirectory(p, n) => (p, n),
-                    //                 ContainerModification::DeleteFile(p, n) => (p, n),
-                    //                 ContainerModification::DeleteDirectory(p, n) => (p, n)
-                    //             };
-                    //             if c_mod_map.contains_key(parent_directory) {
-                    //                 d.content.append(&mut recursive_birth(&PathBuf::from(parent_directory), &c_mod_map));
-                    //             }
-                    //         }
-                    //     },
-                    //     None => {}
-                    // }
                 },
-                Content::File(f) => {
-
-                }
+                _ => {}
             }
 
             // println!("{} -> {} ({path:?})", parent.name, match current { Content::Directory(d) => d.name.clone(), Content::File(f) => f.name.clone() });
         });
 
-        println!("{}", utils::generate_tree(&self));
+        self.traverse(
+            PathBuf::from("."),
+            &|path, _, current| {
+            match current {
+                Content::File(f) => {
+                    // THIS IS WHAT TO DO NEXT
+                    if let Some(modifications) = mod_map
+                        .get(&path.to_string_lossy().to_string())
+                        .map_or(None, |x| x.get(&f.name)) {
+                        // println!("{modifications:?}");
+                        f.apply_changes(modifications);
+                    }
+                },
+                _ => {}
+            }
+
+            // println!("{} -> {} ({path:?})", parent.name, match current { Content::Directory(d) => d.name.clone(), Content::File(f) => f.name.clone() });
+        });
+
+        // println!("{}", utils::generate_tree(&self));
 
         pub fn recursive_birth(parent_directory: &PathBuf, c_mod_map: &HashMap<String, Vec<ContainerModification>>) -> Vec<Content> {
             // pass the new directory's parent directory
@@ -175,20 +202,23 @@ impl Directory {
         }
     }
 
-    pub fn traverse(&mut self, root_path: PathBuf, c_mod_map: &HashMap<String, Vec<ContainerModification>>, mod_map: &HashMap<String, HashMap<String, Vec<Modification>>>, func: fn(&PathBuf, &Directory, &mut Content, &HashMap<String, Vec<ContainerModification>>, &HashMap<String, HashMap<String, Vec<Modification>>>)) {
-        // greedily consume nodes -> not possible, cant hold multiple mutables references
-
-        let c = &self.clone();
+    // pub fn traverse(&mut self, root_path: PathBuf, c_mod_map: &HashMap<String, Vec<ContainerModification>>, mod_map: &HashMap<String, HashMap<String, Vec<Modification>>>, func: fn(&PathBuf, &Directory, &mut Content, &HashMap<String, Vec<ContainerModification>>, &HashMap<String, HashMap<String, Vec<Modification>>>)) {
+    pub fn traverse<F>(&mut self, root_path: PathBuf, func: &F)
+    where
+        F: Fn(&PathBuf, &Directory, &mut Content)
+    {
+        let c = self.clone();
         for content in &mut self.content {
             match content {
                 Content::Directory(d) => {
-                    // TODO : revise whether order of operations is correct
-                    d.traverse(root_path.join(d.name.clone()), c_mod_map, mod_map, func);
-                    func(&root_path.join(d.name.clone()), &c, content, &c_mod_map, &mod_map);
+                    func(&root_path.join(d.name.clone()), &c, content);
                 },
-                Content::File(f) => {
-
+                Content::File(_) => {
+                    func(&root_path, &c, content);
                 }
+            }
+            if let Content::Directory(d) = content {
+                d.traverse(root_path.join(d.name.clone()), func);
             }
         }
     }
