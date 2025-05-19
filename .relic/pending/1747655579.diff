@@ -1,0 +1,454 @@
+= LOCAL 1747655579 "hopefully%20this%20works" "" no_one
+- F .%2Florem%2Fipsum jupiter
++ F .%2Florem%2Fipsum temp
++ D .%2Florem%2Fipsum dolor
++ F .%2Florem%2Fipsum%2Fdolor pluto
+=
+| .%2Fsrc branch.rs
+- 4
++ 4 "pub fn branch(state: &mut State, args: &ArgMatches) {"
+| .%2Fsrc state.rs
+- 0
++ 0 "use std::{collections::HashSet, fs, path::{Path, PathBuf}, sync::{Arc, Mutex}};"
+- 3
++ 3 "use crate::{change::{Change, ContainerModification, Modification}, commit::Commit, content::{Content, Directory, File}, content_set::{ContentSet, IgnoreSet, TrackingSet}, error::RelicError};"
+- 48
+- 49
++ 48 "        track_set.directories = HashSet::from_iter(track_set.directories.difference(&ignore_set.directories).map(|x| PathBuf::from(\".\").join(PathBuf::from(x)).to_string_lossy().to_string()));"
++ 49 "        track_set.files = HashSet::from_iter(track_set.files.difference(&ignore_set.files).map(|x| PathBuf::from(\".\").join(PathBuf::from(x)).to_string_lossy().to_string()));"
+- 148
+- 149
+- 150
++ 148 "    pub fn update_upstream(&mut self, tracked_content: &ContentSet) {"
++ 149 "        // fully fill tracked_content"
++ 150 "        // eg : \"lorem/\" -> [\"lorem/ipsum\", \"lorem/dolor\", \"lorem/sit\"]"
++ 151 "        // traverse directories and fetch all children"
++ 152 ""
++ 153 "        // let tracked_mutex = Arc::new(Mutex::new(tracked_content.clone()));"
++ 154 "        // self.current.traverse(PathBuf::from(\".\"), &|path, _, current| {"
++ 155 "        //     let mut tracked_unlock = tracked_mutex.lock().unwrap();"
++ 156 ""
++ 157 "        //     match current {"
++ 158 "        //         Content::Directory(d) => {"
++ 159 "        //             // if parent in set"
++ 160 "        //             // add to content set"
++ 161 "        //             if tracked_unlock.directories.contains(&d.path.parent().unwrap().to_string_lossy().to_string()) {"
++ 162 "        //                 tracked_unlock.directories.insert(d.path.to_string_lossy().to_string());"
++ 163 "        //             }"
++ 164 "        //         },"
++ 165 "        //         Content::File(f) => {"
++ 166 "        //             if tracked_unlock.directories.contains(&path.to_string_lossy().to_string()) {"
++ 167 "        //                 tracked_unlock.files.insert(path.join(&f.name).to_string_lossy().to_string());"
++ 168 "        //             }"
++ 169 "        //         }"
++ 170 "        //     }"
++ 171 "        // });"
++ 172 ""
++ 173 "        // let tracked_content = tracked_mutex.lock().unwrap().clone();"
++ 174 ""
++ 175 "        let tracked_content = tracked_content.clone();"
++ 176 "        tracked_content.initialise(&mut self.current);"
++ 177 ""
++ 178 "        // get changes"
++ 179 "        // filter to only changes in the tracked_content content set"
++ 180 "        let changes = self.get_changes().filter_changes(&tracked_content);"
++ 181 ""
++ 182 "        println!(\"{}\", changes.serialise_changes());"
++ 183 ""
++ 184 "        // apply changes to current"
++ 185 "        self.current.apply_changes(changes);"
++ 186 "        // replace upstream with current"
++ 187 "        self.upstream = self.current.clone(); // expensive?"
+| .%2Fsrc main.rs
++ 18 "use commit::remove;"
++ 19 "use content::Content;"
+- 20
++ 22 "use content_set::{ContentSet, IgnoreSet, TrackingSet};"
+- 46
++ 48 "pub fn init(_: &mut State, _: &ArgMatches) {"
+- 51
+- 52
+- 53
+- 54
+- 55
+- 56
+- 57
+- 58
+- 59
+- 60
+- 61
+- 62
+- 63
+- 64
++ 53 "    // let _ = fs::write("
++ 54 "    //     \".relic/upstream\","
++ 55 "    //     match State::content_at("
++ 56 "    //         &\"\".to_string(),"
++ 57 "    //         &PathBuf::from(\".\"),"
++ 58 "    //         &IgnoreSet::create(\"target/\".to_string())"
++ 59 "    //     ).unwrap() {"
++ 60 "    //         content::Content::Directory(d) => {"
++ 61 "    //             d.serialise()"
++ 62 "    //         },"
++ 63 "    //         _ => panic!()"
++ 64 "    //     }"
++ 65 "    // );"
++ 66 "    // return;"
++ 67 ""
++ 68 "//     let mut f = content::File {"
++ 69 "//         name: \"\".to_string(),"
++ 70 "//         content: r#\"lorem"
++ 71 "// ipsum"
++ 72 "// dolor"
++ 73 "// sit"
++ 74 "// amet\"#.to_string()"
++ 75 "//     };"
++ 76 ""
++ 77 "//     f.apply_changes(&vec!["
++ 78 "//         change::Modification::Create(\"\".to_string(), \"\".to_string(), 1, \"something here\".to_string())"
++ 79 "//     ]);"
++ 80 ""
++ 81 "//     return;"
+- 88
++ 105 "                .about(\"Adds a file(s) to staging\")"
++ 106 "                .arg_required_else_help(true)"
++ 107 "                .arg("
++ 108 "                    arg!([FILE]... \"File(s) to add (* for all)\")"
++ 109 "                    .required(true)"
++ 110 "                    .value_parser(value_parser!(PathBuf))"
++ 111 "                )"
++ 112 "        )"
++ 113 "        .subcommand("
++ 114 "            Command::new(\"remove\")"
++ 115 "                .about(\"Removes a file(s) to staging\")"
+- 91
++ 118 "                    arg!([FILE]... \"File(s) to remove (* for all)\")"
+- 154
++ 181 "    type CommandType = fn(&mut State, &ArgMatches);"
++ 187 "        (\"remove\".to_string(), remove),"
+- 173
++ 201 "            println!(\"{}\", generate_tree(&s.current));"
+- 176
++ 204 "            println!(\"{}\", s.get_changes().filter_changes(&s.track_set.initialise(&mut s.current)).serialise_changes());"
+- 179
++ 207 "        (\"test\".to_string(), |s, _| {"
+- 186
++ 214 "        Ok(mut s) => {"
+- 191
++ 219 "                    command(&mut s, sub_matches);"
+| .%2Fsrc stash.rs
+- 4
++ 4 "pub fn stash(state: &mut State, args: &ArgMatches) {"
+- 8
++ 8 "pub fn restore(state: &mut State, args: &ArgMatches) {"
+| .%2Fsrc change.rs
+- 0
++ 0 "use std::{collections::{HashMap, HashSet}, path::{Path, PathBuf}};"
+- 5
++ 5 "use crate::{content::{Content, Directory, File}, content_set::ContentSet};"
+- 7
++ 7 "#[derive(Debug, Serialize, Deserialize, Clone)]"
+- 107
++ 107 "                        change.to_string().strip_suffix(\"\\n\").unwrap().to_string()"
++ 272 "        // c_mod_map: map<parent_directory, Vec<changes>>"
++ 273 "        // mod_map: map<parent_directory, map<file_name, Vec<changes>>>"
++ 274 ""
++ 304 ""
++ 305 "    pub fn filter_changes(&self, filter: &ContentSet) -> Change {"
++ 306 "        Change {"
++ 307 "            container_modifications: self.container_modifications"
++ 308 "                .clone()"
++ 309 "                .into_iter()"
++ 310 "                .filter(|c_mod|"
++ 311 "                    filter.directories.contains(&"
++ 312 "                        match c_mod {"
++ 313 "                            ContainerModification::CreateFile(p, n) => { PathBuf::from(p).join(n).to_string_lossy().to_string() },"
++ 314 "                            ContainerModification::DeleteFile(p, n) => { PathBuf::from(p).join(n).to_string_lossy().to_string() },"
++ 315 "                            ContainerModification::CreateDirectory(p, n) => { PathBuf::from(p).join(n).to_string_lossy().to_string() },"
++ 316 "                            ContainerModification::DeleteDirectory(p, n) => { PathBuf::from(p).join(n).to_string_lossy().to_string() },"
++ 317 "                        }"
++ 318 "                    )"
++ 319 "                )"
++ 320 "                .collect(),"
++ 321 "            modifications: self.modifications"
++ 322 "                .clone()"
++ 323 "                .into_iter()"
++ 324 "                .filter(|m|"
++ 325 "                    filter.files.contains(&"
++ 326 "                        match m {"
++ 327 "                            Modification::Create(p, n, _, _) => PathBuf::from(p).join(n).to_string_lossy().to_string(),"
++ 328 "                            Modification::Delete(p, n, _) => PathBuf::from(p).join(n).to_string_lossy().to_string(),"
++ 329 "                        }"
++ 330 "                    )"
++ 331 "                )"
++ 332 "                .collect()"
++ 333 "        }"
++ 334 "    }"
++ 355 "    // denote that parent doesnt exist?"
++ 356 "    "
+| .%2Florem earth
++ 4 "huh"
+| .%2Fsrc content.rs
+- 0
++ 0 "use std::{collections::{HashMap, HashSet}, fs, path::{Path, PathBuf}, sync::Arc};"
+- 4
++ 4 "use crate::{change::{Change, ContainerModification, Modification}, error::RelicError, utils};"
++ 40 ""
++ 41 "    pub fn apply_changes(&mut self, modifications: &Vec<Modification>) {"
++ 42 "        // TODO : investigate whether an additional newline is added to eof"
++ 43 "        let mut lines = self.content.split(\"\\n\").map(|x| x.to_string()).collect::<Vec<String>>();"
++ 44 ""
++ 45 "        // println!(\"({}) BEFORE : {}\\n{}\", self.name, sha256::digest(&self.content), self.content);"
++ 46 ""
++ 47 "        for m in modifications {"
++ 48 "            match m {"
++ 49 "                Modification::Create(_, _, line, content) => {"
++ 50 "                    // insert at that line"
++ 51 "                    lines.insert(*line, content.clone());"
++ 52 "                },"
++ 53 "                Modification::Delete(_, _, line) => {"
++ 54 "                    // delete that line"
++ 55 "                    lines.remove(*line);"
++ 56 "                }"
++ 57 "            }"
++ 58 "        }"
++ 59 ""
++ 60 "        self.content = lines.join(\"\\n\");"
++ 61 ""
++ 62 "        // println!(\"({}) AFTER : {}\\n{}\", self.name, sha256::digest(&self.content), self.content);"
++ 63 "    }"
+- 74
+- 75
++ 98 "        // println!(\"{}\", utils::generate_tree(&self));"
++ 100 "        // two pass"
++ 101 "        // create/delete containers, then create/delete file content"
++ 102 ""
++ 103 "        self.traverse("
++ 104 "            PathBuf::from(\".\"),"
++ 105 "            &|_, _, current| {"
+- 79
+- 80
+- 81
+- 82
+- 83
+- 84
++ 108 "                    // somehow denote that the parent does not yet exist,"
++ 109 "                    // possibly recursively create directories where needed"
++ 110 ""
++ 111 "                    // TODO : optimise the match arms"
++ 112 ""
++ 113 "                    if let Some(c_modifications) = c_mod_map.get(&d.path.to_string_lossy().to_string()) {"
++ 114 "                        // deals with additions"
++ 115 "                        d.content.append(&mut recursive_birth(&PathBuf::from(d.path.clone()), &c_mod_map));"
++ 116 ""
++ 117 "                        let mut deleted_containers = HashSet::new();"
++ 118 "                        // deals with subtractions"
++ 119 "                        for c_mod in c_modifications {"
++ 120 "                            match c_mod {"
++ 121 "                                ContainerModification::DeleteDirectory(_, n) => {"
++ 122 "                                    deleted_containers.insert(n);"
++ 123 "                                }"
++ 124 "                                ContainerModification::DeleteFile(_, n) => {"
++ 125 "                                    deleted_containers.insert(n);"
++ 126 "                                },"
++ 127 "                                _ => {}"
++ 128 "                            }"
++ 129 "                        }"
++ 130 ""
++ 131 "                        d.content = d.content"
++ 132 "                            .iter()"
++ 133 "                            .filter(|x|"
++ 134 "                                !deleted_containers"
++ 135 "                                    .contains(match x {"
++ 136 "                                        Content::File(f) => &f.name,"
++ 137 "                                        Content::Directory(d) => &d.name"
++ 138 "                                    })"
++ 139 "                            )"
++ 140 "                            .map(|x| x.clone())"
++ 141 "                            .collect::<Vec<Content>>();"
+- 87
++ 144 "                _ => {}"
++ 145 "            }"
++ 146 ""
++ 147 "            // println!(\"{} -> {} ({path:?})\", parent.name, match current { Content::Directory(d) => d.name.clone(), Content::File(f) => f.name.clone() });"
++ 148 "        });"
+- 89
++ 150 "        self.traverse("
++ 151 "            PathBuf::from(\".\"),"
++ 152 "            &|path, _, current| {"
++ 153 "            match current {"
++ 154 "                Content::File(f) => {"
++ 155 "                    // THIS IS WHAT TO DO NEXT"
++ 156 "                    if let Some(modifications) = mod_map"
++ 157 "                        .get(&path.to_string_lossy().to_string())"
++ 158 "                        .map_or(None, |x| x.get(&f.name)) {"
++ 159 "                        // println!(\"{modifications:?}\");"
++ 160 "                        f.apply_changes(modifications);"
++ 161 "                    }"
++ 162 "                },"
++ 163 "                _ => {}"
+- 92
++ 166 "            // println!(\"{} -> {} ({path:?})\", parent.name, match current { Content::Directory(d) => d.name.clone(), Content::File(f) => f.name.clone() });"
++ 168 ""
++ 169 "        // println!(\"{}\", utils::generate_tree(&self));"
++ 170 ""
++ 171 "        pub fn recursive_birth(parent_directory: &PathBuf, c_mod_map: &HashMap<String, Vec<ContainerModification>>) -> Vec<Content> {"
++ 172 "            // pass the new directory's parent directory"
++ 173 "            let mut result = vec![];"
++ 174 "            match c_mod_map.get(&parent_directory.to_string_lossy().to_string()) {"
++ 175 "                Some(c_modifications) => {"
++ 176 "                    for c_mod in c_modifications {"
++ 177 "                        match c_mod {"
++ 178 "                            ContainerModification::CreateDirectory(p, n) => {"
++ 179 "                                result.push(Content::Directory(Directory {"
++ 180 "                                    path: parent_directory.join(n.clone()),"
++ 181 "                                    name: n.clone(),"
++ 182 "                                    content: recursive_birth("
++ 183 "                                        &parent_directory.join(n.clone()),"
++ 184 "                                        c_mod_map"
++ 185 "                                    )"
++ 186 "                                }));"
++ 187 "                            },"
++ 188 "                            ContainerModification::CreateFile(p, n) => {"
++ 189 "                                result.push(Content::File(File {"
++ 190 "                                    name: n.clone(),"
++ 191 "                                    content: \"\".to_string()"
++ 192 "                                }))"
++ 193 "                            },"
++ 194 "                            _ => {}"
++ 195 "                        }"
++ 196 "                    }"
++ 197 "                },"
++ 198 "                None => {}"
++ 199 "            }"
++ 200 "            result"
++ 201 "        }"
+- 96
+- 97
++ 204 "    // pub fn traverse(&mut self, root_path: PathBuf, c_mod_map: &HashMap<String, Vec<ContainerModification>>, mod_map: &HashMap<String, HashMap<String, Vec<Modification>>>, func: fn(&PathBuf, &Directory, &mut Content, &HashMap<String, Vec<ContainerModification>>, &HashMap<String, HashMap<String, Vec<Modification>>>)) {"
++ 205 "    pub fn traverse<F>(&mut self, root_path: PathBuf, func: &F)"
++ 206 "    where"
++ 207 "        F: Fn(&PathBuf, &Directory, &mut Content)"
++ 208 "    {"
++ 209 "        let c = self.clone();"
+- 99
+- 100
+- 103
+- 104
+- 105
++ 213 "                    func(&root_path.join(d.name.clone()), &c, content);"
+- 107
+- 108
++ 215 "                Content::File(_) => {"
++ 216 "                    func(&root_path, &c, content);"
++ 219 "            if let Content::Directory(d) = content {"
++ 220 "                d.traverse(root_path.join(d.name.clone()), func);"
++ 221 "            }"
+| .%2Florem%2Fipsum temp
++ 0 "alsfdk"
+| .%2Fsrc utils.rs
+- 2
++ 2 "use crate::{content::{Content, Directory}, state::State};"
+- 14
+- 15
++ 14 "pub fn generate_tree(dir: &Directory) -> String {"
++ 15 "    return fetch_contents(&Content::Directory(dir.clone()));"
+- 35
++ 35 "            // result.push(f.name.clone());"
++ 36 "            result.push(format!(\"{} ({})\", f.name, sha256::digest(&f.content)));"
+| . ipsum
++ 0 "afljslkdfjksfjkslfd"
+| .%2Fsrc content_set.rs
+- 0
++ 0 "use std::{collections::HashSet, path::PathBuf, sync::{Arc, Mutex}};"
+- 4
++ 4 "use crate::content::{Content, Directory};"
++ 5 ""
++ 6 "#[derive(Serialize, Deserialize, Debug, Clone)]"
++ 64 "    fn initialise(&self, d: &mut Directory) -> Self;"
++ 82 ""
++ 83 "    fn initialise(&self, d: &mut Directory) -> ContentSet {"
++ 84 "        let tracked_mutex = Arc::new(Mutex::new(self.clone()));"
++ 85 "        d.traverse(PathBuf::from(\".\"), &|path, _, current| {"
++ 86 "            let mut tracked_unlock = tracked_mutex.lock().unwrap();"
++ 87 ""
++ 88 "            match current {"
++ 89 "                Content::Directory(d) => {"
++ 90 "                    // if parent in set"
++ 91 "                    // add to content set"
++ 92 "                    if tracked_unlock.directories.contains(&d.path.parent().unwrap().to_string_lossy().to_string()) {"
++ 93 "                        tracked_unlock.directories.insert(d.path.to_string_lossy().to_string());"
++ 94 "                    }"
++ 95 "                },"
++ 96 "                Content::File(f) => {"
++ 97 "                    if tracked_unlock.directories.contains(&path.to_string_lossy().to_string()) {"
++ 98 "                        tracked_unlock.files.insert(path.join(&f.name).to_string_lossy().to_string());"
++ 99 "                    }"
++ 100 "                }"
++ 101 "            }"
++ 102 "        });"
++ 103 ""
++ 104 "        // dont ask me"
++ 105 "        let result = tracked_mutex.lock().unwrap().clone();"
++ 106 "        result"
++ 107 "    }"
+| .%2Fsrc commit.rs
+- 0
++ 0 "use std::{collections::HashSet, fs, path::PathBuf};"
+- 29
+- 30
++ 29 "pub fn add(_: &mut State, args: &ArgMatches) {"
+- 33
++ 32 "    let mut result: HashSet<String> = HashSet::from_iter("
++ 33 "        fs::read_to_string(\"./.relic/tracked\")"
++ 34 "        .unwrap()"
++ 35 "        .split(\"\\n\")"
++ 36 "        .filter(|x| !x.is_empty())"
++ 37 "        .map(|x| x.to_string())"
++ 38 "        .collect::<Vec<String>>()"
++ 39 "    );"
+- 35
++ 41 "        // TODO : path.join for this? or concatenating / works?"
++ 42 "        result.insert(format!(\"{}{}\", p.to_string_lossy().to_string(), if !p.to_string_lossy().to_string().ends_with(\"/\") && p.is_dir() { \"/\" } else { \"\" }));"
++ 44 "    let _ = fs::write(\"./.relic/tracked\", result"
++ 45 "        .drain()"
++ 46 "        .collect::<Vec<String>>()"
++ 47 "        .join(\"\\n\")"
++ 48 "    );"
+- 39
++ 51 "pub fn remove(_: &mut State, args: &ArgMatches) {"
++ 52 "    let f = args.get_many::<PathBuf>(\"FILE\").unwrap().map(|x| x.clone()).collect::<Vec<PathBuf>>();"
++ 53 ""
++ 54 "    let mut result: HashSet<String> = HashSet::from_iter("
++ 55 "        fs::read_to_string(\"./.relic/tracked\")"
++ 56 "        .unwrap()"
++ 57 "        .split(\"\\n\")"
++ 58 "        .filter(|x| !x.is_empty())"
++ 59 "        .map(|x| x.to_string())"
++ 60 "        .collect::<Vec<String>>()"
++ 61 "    );"
++ 62 "    for p in f {"
++ 63 "        // TODO : path.join for this? or concatenating / works?"
++ 64 "        result.remove(&format!(\"{}{}\", p.to_string_lossy().to_string(), if !p.to_string_lossy().to_string().ends_with(\"/\") && p.is_dir() { \"/\" } else { \"\" }));"
++ 65 "    }"
++ 66 "    let _ = fs::write(\"./.relic/tracked\", result"
++ 67 "        .drain()"
++ 68 "        .collect::<Vec<String>>()"
++ 69 "        .join(\"\\n\")"
++ 70 "    );"
++ 71 "}"
++ 72 ""
++ 73 "pub fn commit(state: &mut State, args: &ArgMatches) {"
+- 69
+- 70
++ 103 "    (*state).update_upstream(&mut state.track_set.clone());"
+- 73
++ 106 "pub fn push(state: &mut State, args: &ArgMatches) {"
+- 77
++ 110 "pub fn pull(state: &mut State, args: &ArgMatches) {"
+- 81
++ 114 "pub fn fetch(state: &mut State, args: &ArgMatches) {"
+- 85
++ 118 "pub fn cherry(state: &mut State, args: &ArgMatches) {"
+- 89
++ 122 "pub fn rollback(state: &mut State, args: &ArgMatches) {"

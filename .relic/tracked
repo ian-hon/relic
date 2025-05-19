@@ -1,6 +1,6 @@
-target/
-lorem/
 Cargo.toml
-src/
 ipsum
+lorem/
 Cargo.lock
+src/
+target/

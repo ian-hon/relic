@@ -30,17 +30,41 @@ impl Commit {
 pub fn add(_: &mut State, args: &ArgMatches) {
     let f = args.get_many::<PathBuf>("FILE").unwrap().map(|x| x.clone()).collect::<Vec<PathBuf>>();
 
-    let mut result = fs::read_to_string("./.relic/tracked").unwrap().split("\n").map(|x| x.to_string()).collect::<Vec<String>>();
+    let mut result: HashSet<String> = HashSet::from_iter(
+        fs::read_to_string("./.relic/tracked")
+        .unwrap()
+        .split("\n")
+        .filter(|x| !x.is_empty())
+        .map(|x| x.to_string())
+        .collect::<Vec<String>>()
+    );
     for p in f {
         // TODO : path.join for this? or concatenating / works?
-        result.push(format!("{}{}", p.to_string_lossy().to_string(), if !p.to_string_lossy().to_string().ends_with("/") && p.is_dir() { "/" } else { "" }));
+        result.insert(format!("{}{}", p.to_string_lossy().to_string(), if !p.to_string_lossy().to_string().ends_with("/") && p.is_dir() { "/" } else { "" }));
     }
-    let _ = fs::write("./.relic/tracked",
-        HashSet::<String>::from_iter(
-            result
-            .into_iter()
-            .filter(|x| !x.is_empty())
-        )
+    let _ = fs::write("./.relic/tracked", result
+        .drain()
+        .collect::<Vec<String>>()
+        .join("\n")
+    );
+}
+
+pub fn remove(_: &mut State, args: &ArgMatches) {
+    let f = args.get_many::<PathBuf>("FILE").unwrap().map(|x| x.clone()).collect::<Vec<PathBuf>>();
+
+    let mut result: HashSet<String> = HashSet::from_iter(
+        fs::read_to_string("./.relic/tracked")
+        .unwrap()
+        .split("\n")
+        .filter(|x| !x.is_empty())
+        .map(|x| x.to_string())
+        .collect::<Vec<String>>()
+    );
+    for p in f {
+        // TODO : path.join for this? or concatenating / works?
+        result.remove(&format!("{}{}", p.to_string_lossy().to_string(), if !p.to_string_lossy().to_string().ends_with("/") && p.is_dir() { "/" } else { "" }));
+    }
+    let _ = fs::write("./.relic/tracked", result
         .drain()
         .collect::<Vec<String>>()
         .join("\n")
@@ -75,7 +99,7 @@ r#"= {commit id} {unix timestamp of commit} {message} {description} {author}
         author: "no_one".to_string()
     };
 
-    // state.pending_add(commit);
+    state.pending_add(commit);
     // update upstream
     (*state).update_upstream(&mut state.track_set.clone());
 }

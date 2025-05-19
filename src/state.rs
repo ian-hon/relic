@@ -187,7 +187,7 @@ impl State {
         // replace upstream with current
         self.upstream = self.current.clone(); // expensive?
 
-        // let _ = fs::write(".relic/upstream", self.current.serialise());
+        let _ = fs::write(".relic/upstream", self.current.serialise());
     }
     // #endregion
 

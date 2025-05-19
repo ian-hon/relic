@@ -16,6 +16,7 @@ mod content;
 mod change;
 
 use clap::{arg, value_parser, ArgMatches, Command};
+use commit::remove;
 use content::Content;
 use relic::Relic;
 use change::Change;
@@ -102,10 +103,20 @@ pushing and pulling, are implemented."#)
 
         .subcommand(
             Command::new("add")
-                .about("Adds a file to staging")
+                .about("Adds a file(s) to staging")
                 .arg_required_else_help(true)
                 .arg(
-                    arg!([FILE]... "File to add (* for all)")
+                    arg!([FILE]... "File(s) to add (* for all)")
+                    .required(true)
+                    .value_parser(value_parser!(PathBuf))
+                )
+        )
+        .subcommand(
+            Command::new("remove")
+                .about("Removes a file(s) to staging")
+                .arg_required_else_help(true)
+                .arg(
+                    arg!([FILE]... "File(s) to remove (* for all)")
                     .required(true)
                     .value_parser(value_parser!(PathBuf))
                 )
@@ -174,6 +185,7 @@ pushing and pulling, are implemented."#)
         ("init".to_string(), init),
 
         ("add".to_string(), add),
+        ("remove".to_string(), remove),
         ("commit".to_string(), commit),
         ("push".to_string(), push),
         ("pull".to_string(), pull),
