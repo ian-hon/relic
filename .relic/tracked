@@ -1,9 +1,6 @@
-b
-lorem/
-Cargo.lock
-lorem/earth
-Cargo.toml
-a
 ipsum
+lorem/
 src/
+Cargo.lock
+Cargo.toml
 target/

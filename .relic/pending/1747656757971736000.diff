@@ -1,9 +1,0 @@
-= LOCAL 1747656757971736000 "test" "" no_one
-=
-| . ipsum
-- 0
-- 1
-+ 0 "one"
-+ 1 "two"
-+ 2 "three"
-+ 3 "four"
