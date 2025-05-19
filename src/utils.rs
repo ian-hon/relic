@@ -33,8 +33,8 @@ fn fetch_contents(c: &Content) -> String {
             result.push(r.join("\n"));
         },
         Content::File(f) => {
-            // result.push(f.name.clone());
-            result.push(format!("{} ({})", f.name, sha256::digest(&f.content)));
+            result.push(f.name.clone());
+            // result.push(format!("{} ({})", f.name, sha256::digest(&f.content)));
         }
     }
 

@@ -1,0 +1,92 @@
+= LOCAL 1747682517620684000 "test" "" no_one
++ F . a
++ F . b
+=
+| . Cargo.toml
+- 19
++ 19 "# diff = \"0.1.13\""
+| .%2Fsrc content.rs
++ 69 "        println!(\"{modifications:?}\");"
++ 70 ""
++ 71 "        println!(\"before :\\n{:?}\", self.content);"
++ 72 "        println!(\"{lines:?}\");"
++ 73 ""
+- 75
++ 80 "        for m in &modifications {"
+- 79
++ 84 "                    lines.insert(*line, content.clone());"
+- 83
++ 88 "                    lines.remove(*line);"
++ 94 "        println!(\"\\n\\nafter :\\n{:?}\", self.content);"
++ 95 "        println!(\"{lines:?}\");"
+| . a
+- 0
++ 0 "a"
++ 1 "b"
++ 2 "c"
+| .%2Fsrc stash.rs
+- 11
+| .%2Florem%2Fipsum temp
+- 1
+| .%2Fsrc branch.rs
+- 7
+| . b
++ 0 "x"
++ 1 "b"
++ 2 "z"
++ 3 ""
++ 4 ""
++ 5 ""
++ 6 ""
++ 7 ""
+| .%2Fsrc change.rs
+- 78
+- 79
++ 78 "        // similar does not handle newlines at eof well at all"
++ 79 "        // this is the workaround for it"
++ 80 "        let upstream = format!(\"{}\\n\", upstream_file.content.clone());"
++ 81 "        let current = format!(\"{}\\n\", current_file.content.clone());"
+- 371
+| .%2Fsrc error.rs
+- 8
+| .%2Fsrc main.rs
+- 21
++ 21 "use change::{Change, Modification};"
++ 23 "use similar::{ChangeTag, TextDiff};"
++ 54 "    // issue with similar diffing library"
++ 55 "    // a\\nb\\nc diff a\\nx\\ny\\nz\\n"
++ 56 ""
++ 57 "    // let a = \"a\\nb\\nc\".to_string();"
++ 58 "    // let b = \"a\\nb\\n\\nz\\n\".to_string();"
++ 59 "    // let diff = TextDiff::from_lines(&a, &b);"
++ 60 "    // for change in diff"
++ 61 "    //     .iter_all_changes()"
++ 62 "    //     .filter_map(|c| match c.tag() {"
++ 63 "    //         ChangeTag::Equal => None,"
++ 64 "    //         _ => Some(c)"
++ 65 "    //     }"
++ 66 "    // ) {"
++ 67 "    //     println!(\"{:?}\","
++ 68 "    //         match change.tag() {"
++ 69 "    //             ChangeTag::Delete => Modification::Delete("
++ 70 "    //                 \"\".to_string(),"
++ 71 "    //                 \"\".to_string(),"
++ 72 "    //                 change.old_index().unwrap()"
++ 73 "    //             ),"
++ 74 "    //             ChangeTag::Insert => Modification::Create("
++ 75 "    //                 \"\".to_string(),"
++ 76 "    //                 \"\".to_string(),"
++ 77 "    //                 change.new_index().unwrap(),"
++ 78 "    //                 // change.to_string()"
++ 79 "    //                 change.to_string().strip_suffix(\"\\n\").unwrap().to_string()"
++ 80 "    //             ),"
++ 81 "    //             _ => panic!()"
++ 82 "    //         }"
++ 83 "    //     );"
++ 84 "    // }"
++ 85 "    // return;"
++ 86 ""
+| .%2Florem mars
+- 1
+| .%2Fsrc content_set.rs
+- 111

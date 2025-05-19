@@ -2,7 +2,7 @@ use std::{collections::HashSet, path::PathBuf, sync::{Arc, Mutex}};
 
 use serde::{Deserialize, Serialize};
 
-use crate::content::{Content, Directory};
+use crate::content::{Content, ContentMutRef, Directory};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ContentSet {
@@ -84,23 +84,25 @@ impl TrackingSet for ContentSet {
     fn initialise(&self, d: &mut Directory) -> ContentSet {
         let tracked_mutex = Arc::new(Mutex::new(self.clone()));
         d.traverse(PathBuf::from("."), &|path, _, current| {
+            // println!("traversing at : {path:?}");
+
             let mut tracked_unlock = tracked_mutex.lock().unwrap();
 
             match current {
-                Content::Directory(d) => {
+                ContentMutRef::Directory(d) => {
                     // if parent in set
                     // add to content set
                     if tracked_unlock.directories.contains(&d.path.parent().unwrap().to_string_lossy().to_string()) {
                         tracked_unlock.directories.insert(d.path.to_string_lossy().to_string());
                     }
                 },
-                Content::File(f) => {
+                ContentMutRef::File(f) => {
                     if tracked_unlock.directories.contains(&path.to_string_lossy().to_string()) {
                         tracked_unlock.files.insert(path.join(&f.name).to_string_lossy().to_string());
                     }
                 }
             }
-        });
+        }, &d.clone());
 
         // dont ask me
         let result = tracked_mutex.lock().unwrap().clone();

@@ -1,0 +1,32 @@
+= LOCAL 1747676038141631000 "test" "" no_one
+=
+| .%2Fsrc stash.rs
+- 10
++ 10 "}"
+| .%2Florem earth
+- 7
++ 7 "klasjdflskdf"
+| .%2Fsrc content_set.rs
+- 110
++ 110 "}"
+| .%2Fsrc change.rs
+- 370
++ 370 "}"
+| .%2Fsrc content.rs
+- 244
++ 244 "        println!(\"traversing : {:?} from {:?}\", self.path, parent.path);"
+| .%2Fsrc error.rs
+- 7
++ 7 "}"
+| .%2Florem%2Fipsum temp
+- 0
++ 0 "alsfdk"
+| .%2Fsrc branch.rs
+- 6
++ 6 "}"
+| . Cargo.toml
+- 18
++ 18 "similar = \"2.7.0\""
+| .%2Florem mars
+- 0
++ 0 "sldfjsljdkf"

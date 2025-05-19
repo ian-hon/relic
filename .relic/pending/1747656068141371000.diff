@@ -1,0 +1,6 @@
+= LOCAL 1747656068141371000 "test" "" no_one
+=
+| .%2Fsrc content.rs
++ 43 "        // BUG : when the file has only one line, diffs start to break"
+| . ipsum
+- 0

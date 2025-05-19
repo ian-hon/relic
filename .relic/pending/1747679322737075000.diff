@@ -1,0 +1,29 @@
+= LOCAL 1747679322737075000 "test" "" no_one
+=
+| .%2Florem mars
+- 0
++ 0 "sldfjsljdkf"
+| .%2Florem earth
+- 7
++ 7 "klasjdflskdf"
+| .%2Fsrc branch.rs
+- 6
++ 6 "}"
+| .%2Fsrc error.rs
+- 7
++ 7 "}"
+| .%2Fsrc content_set.rs
+- 110
++ 110 "}"
+| .%2Florem%2Fipsum temp
+- 0
++ 0 "alsfdk"
+| . Cargo.toml
+- 18
++ 18 "similar = \"2.7.0\""
+| .%2Fsrc stash.rs
+- 10
++ 10 "}"
+| .%2Fsrc change.rs
+- 370
++ 370 "}"

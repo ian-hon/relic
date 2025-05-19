@@ -173,21 +173,20 @@ impl State {
 
         // let tracked_content = tracked_mutex.lock().unwrap().clone();
 
-        let tracked_content = tracked_content.clone();
-        tracked_content.initialise(&mut self.current);
+        let tracked_content = tracked_content.clone().initialise(&mut self.current);
 
         // get changes
         // filter to only changes in the tracked_content content set
         let changes = self.get_changes().filter_changes(&tracked_content);
 
-        println!("{}", changes.serialise_changes());
+        // println!("{}", changes.serialise_changes());
 
         // apply changes to current
-        self.current.apply_changes(changes);
+        self.upstream.apply_changes(changes);
         // replace upstream with current
-        self.upstream = self.current.clone(); // expensive?
+        // self.upstream = self.current.clone(); // expensive?
 
-        let _ = fs::write(".relic/upstream", self.current.serialise());
+        let _ = fs::write(".relic/upstream", self.upstream.serialise());
     }
     // #endregion
 

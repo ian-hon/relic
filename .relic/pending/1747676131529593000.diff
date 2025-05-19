@@ -1,0 +1,152 @@
+= LOCAL 1747676131529593000 "test" "" no_one
+=
+| .%2Fsrc change.rs
+- 370
++ 370 "}"
+| .%2Florem earth
+- 7
++ 7 "klasjdflskdf"
+| .%2Fsrc error.rs
+- 7
++ 7 "}"
+| .%2Florem%2Fipsum temp
+- 0
++ 0 "alsfdk"
+| .%2Fsrc content.rs
+- 132
+- 133
+- 134
+- 135
+- 136
+- 137
+- 138
+- 139
++ 132 "        // self.traverse("
++ 133 "        //     PathBuf::from(\".\"),"
++ 134 "        //     &|_, _, current| {"
++ 135 "        //         // println!(\"TRAVERSED : {current:?}\");"
++ 136 "        //         match current {"
++ 137 "        //             ContentMutRef::Directory(d) => {"
++ 138 "        //                 // somehow denote that the parent does not yet exist,"
++ 139 "        //                 // possibly recursively create directories where needed"
+- 141
+- 142
++ 141 "        //                 // TODO : optimise the match arms"
++ 142 "        //                 // println!(\"TRAVERSED : {}\", d.path.to_string_lossy().to_string());"
+- 144
+- 145
++ 144 "        //                 if let Some(c_modifications) = c_mod_map.get(&d.path.to_string_lossy().to_string()) {"
++ 145 "        //                     // println!(\"BEFORE\\n{}\", utils::generate_tree(&d));"
+- 147
+- 148
++ 147 "        //                     // deals with additions"
++ 148 "        //                     d.content.append(&mut recursive_birth(&PathBuf::from(d.path.clone()), &c_mod_map));"
+- 150
+- 151
+- 152
+- 153
+- 154
+- 155
+- 156
+- 157
+- 158
+- 159
+- 160
+- 161
+- 162
++ 150 "        //                     let mut deleted_containers = HashSet::new();"
++ 151 "        //                     // deals with subtractions"
++ 152 "        //                     for c_mod in c_modifications {"
++ 153 "        //                         match c_mod {"
++ 154 "        //                             ContainerModification::DeleteDirectory(_, n) => {"
++ 155 "        //                                 deleted_containers.insert(n);"
++ 156 "        //                             }"
++ 157 "        //                             ContainerModification::DeleteFile(_, n) => {"
++ 158 "        //                                 deleted_containers.insert(n);"
++ 159 "        //                             },"
++ 160 "        //                             _ => {}"
++ 161 "        //                         }"
++ 162 "        //                     }"
+- 164
+- 165
+- 166
+- 167
+- 168
+- 169
+- 170
+- 171
+- 172
+- 173
+- 174
+- 175
+- 176
+- 177
+- 178
++ 164 "        //                     d.content = d.content"
++ 165 "        //                         .iter()"
++ 166 "        //                         .filter(|x|"
++ 167 "        //                             !deleted_containers"
++ 168 "        //                                 .contains(match x {"
++ 169 "        //                                     Content::File(f) => &f.name,"
++ 170 "        //                                     Content::Directory(d) => &d.name"
++ 171 "        //                                 })"
++ 172 "        //                         )"
++ 173 "        //                         .map(|x| x.clone())"
++ 174 "        //                         .collect::<Vec<Content>>();"
++ 175 "        //                 }"
++ 176 "        //             },"
++ 177 "        //             _ => {}"
++ 178 "        //         }"
+- 180
+- 181
++ 180 "        //     // println!(\"{} -> {} ({path:?})\", parent.name, match current { Content::Directory(d) => d.name.clone(), Content::File(f) => f.name.clone() });"
++ 181 "        // }, &self.clone());"
+- 183
+- 184
+- 185
+- 186
+- 187
+- 188
+- 189
+- 190
+- 191
+- 192
+- 193
+- 194
+- 195
+- 196
+- 197
++ 183 "        // self.traverse("
++ 184 "        //     PathBuf::from(\".\"),"
++ 185 "        //     &|path, _, current| {"
++ 186 "        //     match current {"
++ 187 "        //         ContentMutRef::File(f) => {"
++ 188 "        //             // THIS IS WHAT TO DO NEXT"
++ 189 "        //             if let Some(modifications) = mod_map"
++ 190 "        //                 .get(&path.to_string_lossy().to_string())"
++ 191 "        //                 .map_or(None, |x| x.get(&f.name)) {"
++ 192 "        //                 // println!(\"{modifications:?}\");"
++ 193 "        //                 f.apply_changes(modifications);"
++ 194 "        //             }"
++ 195 "        //         },"
++ 196 "        //         _ => {}"
++ 197 "        //     }"
+- 199
+- 200
++ 199 "        //     // println!(\"{} -> {} ({path:?})\", parent.name, match current { Content::Directory(d) => d.name.clone(), Content::File(f) => f.name.clone() });"
++ 200 "        // }, &self.clone());"
+| . Cargo.toml
+- 18
++ 18 "similar = \"2.7.0\""
+| .%2Fsrc branch.rs
+- 6
++ 6 "}"
+| .%2Fsrc stash.rs
+- 10
++ 10 "}"
+| .%2Florem mars
+- 0
++ 0 "sldfjsljdkf"
+| .%2Fsrc content_set.rs
+- 110
++ 110 "}"

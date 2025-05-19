@@ -19,8 +19,9 @@ use clap::{arg, value_parser, ArgMatches, Command};
 use commit::remove;
 use content::Content;
 use relic::Relic;
-use change::Change;
+use change::{Change, Modification};
 use content_set::{ContentSet, IgnoreSet, TrackingSet};
+use similar::{ChangeTag, TextDiff};
 use utils::generate_tree;
 
 use crate::commit::{add, commit, push, pull, fetch, cherry, rollback};
@@ -51,6 +52,39 @@ pub fn init(_: &mut State, _: &ArgMatches) {
 }
 
 fn main() {
+    // issue with similar diffing library
+    // a\nb\nc diff a\nx\ny\nz\n
+
+    // let a = "a\nb\nc".to_string();
+    // let b = "a\nb\n\nz\n".to_string();
+    // let diff = TextDiff::from_lines(&a, &b);
+    // for change in diff
+    //     .iter_all_changes()
+    //     .filter_map(|c| match c.tag() {
+    //         ChangeTag::Equal => None,
+    //         _ => Some(c)
+    //     }
+    // ) {
+    //     println!("{:?}",
+    //         match change.tag() {
+    //             ChangeTag::Delete => Modification::Delete(
+    //                 "".to_string(),
+    //                 "".to_string(),
+    //                 change.old_index().unwrap()
+    //             ),
+    //             ChangeTag::Insert => Modification::Create(
+    //                 "".to_string(),
+    //                 "".to_string(),
+    //                 change.new_index().unwrap(),
+    //                 // change.to_string()
+    //                 change.to_string().strip_suffix("\n").unwrap().to_string()
+    //             ),
+    //             _ => panic!()
+    //         }
+    //     );
+    // }
+    // return;
+
     // let _ = fs::write(
     //     ".relic/upstream",
     //     match State::content_at(
@@ -66,20 +100,30 @@ fn main() {
     // );
     // return;
 
-//     let mut f = content::File {
-//         name: "".to_string(),
-//         content: r#"lorem
-// ipsum
-// dolor
-// sit
-// amet"#.to_string()
-//     };
+    // let mut f = content::Directory {
+    //     path: PathBuf::from("."),
+    //     name: "".to_string(),
+    //     content: vec![
+    //         content::Content::Directory(content::Directory {
+    //             path: PathBuf::from("."),
+    //             name: "huh".to_string(),
+    //             content: vec![]
+    //         })
+    //     ]
+    // };
 
-//     f.apply_changes(&vec![
-//         change::Modification::Create("".to_string(), "".to_string(), 1, "something here".to_string())
-//     ]);
+    // println!("{}", utils::generate_tree(&f));
 
-//     return;
+    // f.apply_changes(Change {
+    //     container_modifications: vec![
+    //         change::ContainerModification::CreateDirectory(".".to_string(), "lorem".to_string())
+    //     ],
+    //     modifications: vec![]
+    // });
+
+    // println!("{}", utils::generate_tree(&f));
+
+    // return;
 
     // #region commands
     // TODO : automate this

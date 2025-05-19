@@ -1,6 +1,9 @@
-Cargo.toml
-ipsum
+b
 lorem/
 Cargo.lock
+lorem/earth
+Cargo.toml
+a
+ipsum
 src/
 target/

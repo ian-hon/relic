@@ -76,8 +76,10 @@ impl Change {
         // basically a shortest distance problem, with downwards, rightwards and diagonal directions as movement choices
         // (note that diagonal movements do not contribute towards the distance)
 
-        let upstream = upstream_file.content.clone();
-        let current = current_file.content.clone();
+        // similar does not handle newlines at eof well at all
+        // this is the workaround for it
+        let upstream = format!("{}\n", upstream_file.content.clone());
+        let current = format!("{}\n", current_file.content.clone());
 
         // TODO : compare hashes instead of files
         if upstream == current {
@@ -269,20 +271,20 @@ impl Change {
         }
     }
 
-    pub fn as_map(&self) -> (HashMap<String, Vec<ContainerModification>>, HashMap<String, HashMap<String, Vec<Modification>>>) {
+    pub fn as_map(&self) -> (HashMap<String, HashSet<ContainerModification>>, HashMap<String, HashMap<String, Vec<Modification>>>) {
         // c_mod_map: map<parent_directory, Vec<changes>>
         // mod_map: map<parent_directory, map<file_name, Vec<changes>>>
 
         let mut c_mod_map = HashMap::new();
         for container_modification in &self.container_modifications {
             let path = match container_modification {
-                ContainerModification::CreateDirectory(path, _) => path.clone(),
-                ContainerModification::DeleteDirectory(path, _) => path.clone(),
-                ContainerModification::CreateFile(path, _) => path.clone(),
+                ContainerModification::CreateDirectory(path, _) |
+                ContainerModification::DeleteDirectory(path, _) |
+                ContainerModification::CreateFile(path, _) |
                 ContainerModification::DeleteFile(path, _) => path.clone()
             };
 
-            c_mod_map.entry(path).or_insert(vec![]).push(container_modification.clone());
+            c_mod_map.entry(path).or_insert(HashSet::new()).insert(container_modification.clone());
         }
 
         let mut mod_map = HashMap::new();
@@ -309,14 +311,10 @@ impl Change {
                 .clone()
                 .into_iter()
                 .filter(|c_mod|
-                    filter.directories.contains(&
-                        match c_mod {
-                            ContainerModification::CreateFile(p, n) => { PathBuf::from(p).join(n).to_string_lossy().to_string() },
-                            ContainerModification::DeleteFile(p, n) => { PathBuf::from(p).join(n).to_string_lossy().to_string() },
-                            ContainerModification::CreateDirectory(p, n) => { PathBuf::from(p).join(n).to_string_lossy().to_string() },
-                            ContainerModification::DeleteDirectory(p, n) => { PathBuf::from(p).join(n).to_string_lossy().to_string() },
-                        }
-                    )
+                    match c_mod {
+                        ContainerModification::CreateFile(p, n) | ContainerModification::DeleteFile(p, n) => filter.files.contains(&PathBuf::from(p).join(n).to_string_lossy().to_string()),
+                        ContainerModification::CreateDirectory(p, n) | ContainerModification::DeleteDirectory(p, n) => filter.directories.contains(&PathBuf::from(p).join(n).to_string_lossy().to_string()),
+                    }
                 )
                 .collect(),
             modifications: self.modifications
@@ -325,8 +323,7 @@ impl Change {
                 .filter(|m|
                     filter.files.contains(&
                         match m {
-                            Modification::Create(p, n, _, _) => PathBuf::from(p).join(n).to_string_lossy().to_string(),
-                            Modification::Delete(p, n, _) => PathBuf::from(p).join(n).to_string_lossy().to_string(),
+                            Modification::Create(p, n, _, _) | Modification::Delete(p, n, _) => PathBuf::from(p).join(n).to_string_lossy().to_string(),
                         }
                     )
                 )
@@ -335,7 +332,7 @@ impl Change {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Hash, PartialEq, Eq)]
 pub enum Modification {
     // creation/deletion of lines in files
     Create(
@@ -351,7 +348,7 @@ pub enum Modification {
     )
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Hash, PartialEq, Eq)]
 pub enum ContainerModification {
     // denote that parent doesnt exist?
     

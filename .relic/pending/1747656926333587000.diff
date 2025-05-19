@@ -1,0 +1,13 @@
+= LOCAL 1747656926333587000 "test" "" no_one
+=
+| . ipsum
+- 0
+- 1
+- 2
+- 3
++ 0 "satu"
++ 1 "dua"
++ 2 "tiga"
++ 3 "empat"
++ 4 "lima"
++ 5 "tujuh"
