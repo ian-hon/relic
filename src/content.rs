@@ -121,87 +121,64 @@ impl Directory {
         let (c_mod_map, mod_map) = changes.as_map();
         let c_mod_map = Arc::new(Mutex::new(c_mod_map));
 
-        // println!("{c_mod_map:?}");
-
-        // println!("changes to apply:\n{}", changes.serialise_changes());
-
-        // println!("{}", serde_json::to_string_pretty(&self).unwrap().to_string());
-
-        // println!("{}", utils::generate_tree(&self));
-
         // two pass
         // create/delete containers, then create/delete file content
 
         self.traverse(
             PathBuf::from("."),
             &|_, _, current| {
-                match current {
-                    ContentMutRef::Directory(d) => {
-                        // somehow denote that the parent does not yet exist,
-                        // possibly recursively create directories where needed
+            if let ContentMutRef::Directory(d) = current {
+                // somehow denote that the parent does not yet exist,
+                // possibly recursively create directories where needed
 
-                        // TODO : optimise the match arms
-                        // println!("TRAVERSED : {}", d.path.to_string_lossy().to_string());
-                        let mut c_mod_map_lock = c_mod_map.lock().unwrap();
-                        if let Some(c_modifications) = c_mod_map_lock.get(&d.path.to_string_lossy().to_string()) {
-                            let c_clone = c_modifications.clone();
+                // TODO : optimise the match arms
+                let mut c_mod_map_lock = c_mod_map.lock().unwrap();
+                if let Some(c_modifications) = c_mod_map_lock.get(&d.path.to_string_lossy().to_string()) {
+                    let c_clone = c_modifications.clone();
 
-                            // deals with additions
-                            d.content.append(&mut recursive_birth(&PathBuf::from(d.path.clone()), &mut c_mod_map_lock));
+                    // deals with additions
+                    d.content.append(&mut recursive_birth(&PathBuf::from(d.path.clone()), &mut c_mod_map_lock));
 
-                            let mut deleted_containers = HashSet::new();
-                            // deals with subtractions
-                            for c_mod in &c_clone {
-                                match c_mod {
-                                    ContainerModification::DeleteDirectory(_, n) => {
-                                        deleted_containers.insert(n);
-                                    }
-                                    ContainerModification::DeleteFile(_, n) => {
-                                        deleted_containers.insert(n);
-                                    },
-                                    _ => {}
-                                }
+                    let mut deleted_containers = HashSet::new();
+                    // deals with subtractions
+                    for c_mod in &c_clone {
+                        match c_mod {
+                            ContainerModification::DeleteDirectory(_, n) => {
+                                deleted_containers.insert(n);
                             }
-
-                            d.content = d.content
-                                .iter()
-                                .filter(|x|
-                                    !deleted_containers
-                                        .contains(match x {
-                                            Content::File(f) => &f.name,
-                                            Content::Directory(d) => &d.name
-                                        })
-                                )
-                                .map(|x| x.clone())
-                                .collect::<Vec<Content>>();
+                            ContainerModification::DeleteFile(_, n) => {
+                                deleted_containers.insert(n);
+                            },
+                            _ => {}
                         }
-                    },
-                    _ => {}
-                }
+                    }
 
-            // println!("{} -> {} ({path:?})", parent.name, match current { Content::Directory(d) => d.name.clone(), Content::File(f) => f.name.clone() });
+                    d.content = d.content
+                        .iter()
+                        .filter(|x|
+                            !deleted_containers
+                                .contains(match x {
+                                    Content::File(f) => &f.name,
+                                    Content::Directory(d) => &d.name
+                                })
+                        )
+                        .map(|x| x.clone())
+                        .collect::<Vec<Content>>();
+                }
+            }
         }, &Directory::new());
 
         self.traverse(
             PathBuf::from("."),
             &|path, _, current| {
-            match current {
-                ContentMutRef::File(f) => {
-                    // THIS IS WHAT TO DO NEXT
-                    if let Some(modifications) = mod_map
-                        .get(&path.to_string_lossy().to_string())
-                        .map_or(None, |x| x.get(&f.name)) {
-                        // println!("{modifications:?}");
-                        f.apply_changes(modifications);
-                    }
-                },
-                _ => {}
+            if let ContentMutRef::File(f) = current {
+                if let Some(modifications) = mod_map
+                    .get(&path.to_string_lossy().to_string())
+                    .map_or(None, |x| x.get(&f.name)) {
+                    f.apply_changes(modifications);
+                }
             }
-
-            // println!("{} -> {} ({path:?})", parent.name, match current { Content::Directory(d) => d.name.clone(), Content::File(f) => f.name.clone() });
         }, &self.clone());
-
-        // println!("{}", utils::generate_tree(&self));
 
         pub fn recursive_birth(parent_directory: &PathBuf, c_mod_map: &mut HashMap<String, HashSet<ContainerModification>>) -> Vec<Content> {
             // pass the new directory's parent directory

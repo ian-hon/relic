@@ -151,41 +151,14 @@ impl State {
         // eg : "lorem/" -> ["lorem/ipsum", "lorem/dolor", "lorem/sit"]
         // traverse directories and fetch all children
 
-        // let tracked_mutex = Arc::new(Mutex::new(tracked_content.clone()));
-        // self.current.traverse(PathBuf::from("."), &|path, _, current| {
-        //     let mut tracked_unlock = tracked_mutex.lock().unwrap();
-
-        //     match current {
-        //         Content::Directory(d) => {
-        //             // if parent in set
-        //             // add to content set
-        //             if tracked_unlock.directories.contains(&d.path.parent().unwrap().to_string_lossy().to_string()) {
-        //                 tracked_unlock.directories.insert(d.path.to_string_lossy().to_string());
-        //             }
-        //         },
-        //         Content::File(f) => {
-        //             if tracked_unlock.directories.contains(&path.to_string_lossy().to_string()) {
-        //                 tracked_unlock.files.insert(path.join(&f.name).to_string_lossy().to_string());
-        //             }
-        //         }
-        //     }
-        // });
-
-        // let tracked_content = tracked_mutex.lock().unwrap().clone();
-
         let tracked_content = tracked_content.clone().initialise(&mut self.current);
 
         // get changes
         // filter to only changes in the tracked_content content set
         let changes = self.get_changes().filter_changes(&tracked_content);
 
-        // println!("{}", changes.serialise_changes());
-
         // apply changes to current
         self.upstream.apply_changes(changes);
-        // replace upstream with current
-        // self.upstream = self.current.clone(); // expensive?
-
         let _ = fs::write(".relic/upstream", self.upstream.serialise());
     }
     // #endregion

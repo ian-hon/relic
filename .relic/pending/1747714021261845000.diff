@@ -1,0 +1,104 @@
+= LOCAL 1747714021261845000 "Simpler%20match%20handling" "" no_one
+=
+| .%2Fsrc content.rs
+- 123
+- 124
+- 125
+- 126
+- 127
+- 128
+- 129
+- 130
+- 137
+- 138
+- 139
+- 140
++ 129 "            if let ContentMutRef::Directory(d) = current {"
++ 130 "                // somehow denote that the parent does not yet exist,"
++ 131 "                // possibly recursively create directories where needed"
+- 142
+- 143
+- 144
+- 145
+- 146
++ 133 "                // TODO : optimise the match arms"
++ 134 "                let mut c_mod_map_lock = c_mod_map.lock().unwrap();"
++ 135 "                if let Some(c_modifications) = c_mod_map_lock.get(&d.path.to_string_lossy().to_string()) {"
++ 136 "                    let c_clone = c_modifications.clone();"
+- 148
+- 149
++ 138 "                    // deals with additions"
++ 139 "                    d.content.append(&mut recursive_birth(&PathBuf::from(d.path.clone()), &mut c_mod_map_lock));"
+- 151
+- 152
+- 153
+- 154
+- 155
+- 156
+- 157
+- 158
+- 159
+- 160
+- 161
+- 162
++ 141 "                    let mut deleted_containers = HashSet::new();"
++ 142 "                    // deals with subtractions"
++ 143 "                    for c_mod in &c_clone {"
++ 144 "                        match c_mod {"
++ 145 "                            ContainerModification::DeleteDirectory(_, n) => {"
++ 146 "                                deleted_containers.insert(n);"
+- 164
+- 165
+- 166
+- 167
+- 168
+- 169
+- 170
+- 171
+- 172
+- 173
+- 174
+- 175
++ 148 "                            ContainerModification::DeleteFile(_, n) => {"
++ 149 "                                deleted_containers.insert(n);"
++ 150 "                            },"
++ 151 "                            _ => {}"
+- 177
+- 178
++ 153 "                    }"
++ 154 ""
++ 155 "                    d.content = d.content"
++ 156 "                        .iter()"
++ 157 "                        .filter(|x|"
++ 158 "                            !deleted_containers"
++ 159 "                                .contains(match x {"
++ 160 "                                    Content::File(f) => &f.name,"
++ 161 "                                    Content::Directory(d) => &d.name"
++ 162 "                                })"
++ 163 "                        )"
++ 164 "                        .map(|x| x.clone())"
++ 165 "                        .collect::<Vec<Content>>();"
+- 180
+- 181
++ 167 "            }"
+- 187
+- 188
+- 189
+- 190
+- 191
+- 192
+- 193
+- 194
+- 195
+- 196
+- 197
++ 173 "            if let ContentMutRef::File(f) = current {"
++ 174 "                if let Some(modifications) = mod_map"
++ 175 "                    .get(&path.to_string_lossy().to_string())"
++ 176 "                    .map_or(None, |x| x.get(&f.name)) {"
++ 177 "                    f.apply_changes(modifications);"
++ 178 "                }"
+- 199
+- 200
+- 202
+- 203
