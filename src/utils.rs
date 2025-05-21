@@ -1,12 +1,13 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::{content::{Content, Directory}, state::State};
+use crate::{
+    content::{Content, Directory},
+    state::State,
+};
 
 pub fn get_value(args: &Vec<String>, key: &str) -> Option<String> {
     for (index, i) in args.iter().enumerate() {
-        if i.starts_with("-") && (i[1..] == key[..]) {
-
-        }
+        if i.starts_with("-") && (i[1..] == key[..]) {}
     }
 
     None
@@ -26,12 +27,27 @@ fn fetch_contents(c: &Content) -> String {
                 let length = d.content.len() - 1;
                 for (index, i) in d.content.iter().enumerate() {
                     for (inner_index, line) in fetch_contents(i).split("\n").enumerate() {
-                        r.push(format!(" {} {line}", if index == length { if inner_index == 0 { "└" } else { "" } } else { if inner_index == 0 { "├" } else { "│" } }));
+                        r.push(format!(
+                            " {} {line}",
+                            if index == length {
+                                if inner_index == 0 {
+                                    "└"
+                                } else {
+                                    ""
+                                }
+                            } else {
+                                if inner_index == 0 {
+                                    "├"
+                                } else {
+                                    "│"
+                                }
+                            }
+                        ));
                     }
                 }
             }
             result.push(r.join("\n"));
-        },
+        }
         Content::File(f) => {
             result.push(f.name.clone());
             // result.push(format!("{} ({})", f.name, sha256::digest(&f.content)));

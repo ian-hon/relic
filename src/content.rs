@@ -1,8 +1,17 @@
-use std::{collections::{HashMap, HashSet}, fs, path::{Path, PathBuf}, sync::{Arc, Mutex}};
+use std::{
+    collections::{HashMap, HashSet},
+    fs,
+    path::{Path, PathBuf},
+    sync::{Arc, Mutex},
+};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{change::{Change, ContainerModification, Modification}, error::RelicError, utils};
+use crate::{
+    change::{Change, ContainerModification, Modification},
+    error::RelicError,
+    utils,
+};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum Content {
@@ -26,18 +35,16 @@ impl File {
     pub fn new() -> File {
         File {
             name: "".to_string(),
-            content: "".to_string()
+            content: "".to_string(),
         }
     }
 
     pub fn create(name: String, path: PathBuf) -> Result<File, RelicError> {
         match fs::read_to_string(path) {
-            Ok(content) => {
-                Ok(File {
-                    name: name,
-                    content: content
-                })
-            },
+            Ok(content) => Ok(File {
+                name: name,
+                content: content,
+            }),
             Err(_) => {
                 // println!("Error creating file : {e}");
                 Err(RelicError::FileCantOpen)
@@ -61,16 +68,20 @@ impl File {
         // APPLY CHANGES TO UPSTREAM, NOT CURRENT
 
         // TODO : revise modification order
-        
+
         // deletions first then creations?
         //      sorted largest to smallest
         // creations sorted smallest to largest?
-        let mut lines = self.content.split("\n").map(|x| x.to_string()).collect::<Vec<String>>();
+        let mut lines = self
+            .content
+            .split("\n")
+            .map(|x| x.to_string())
+            .collect::<Vec<String>>();
 
         let mut modifications = modifications.clone();
         modifications.sort_by_key(|m| match m {
             Modification::Create(_, _, l, _) => *l as i128,
-            Modification::Delete(_, _, l) => -(*l as i128)
+            Modification::Delete(_, _, l) => -(*l as i128),
         });
 
         for m in &modifications {
@@ -78,7 +89,7 @@ impl File {
                 Modification::Create(_, _, line, content) => {
                     // insert at that line
                     lines.insert(*line, content.clone());
-                },
+                }
                 Modification::Delete(_, _, line) => {
                     // delete that line
                     lines.remove(*line);
@@ -94,7 +105,7 @@ impl File {
 pub struct Directory {
     pub path: PathBuf,
     pub name: String,
-    pub content: Vec<Content>
+    pub content: Vec<Content>,
 }
 
 impl Directory {
@@ -102,14 +113,14 @@ impl Directory {
         Directory {
             path: PathBuf::from(""),
             name: "".to_string(),
-            content: vec![]
+            content: vec![],
         }
     }
 
     pub fn deserialise(s: String) -> Option<Directory> {
         match serde_json::from_str(&s) {
             Ok(d) => Some(d),
-            _ => None
+            _ => None,
         }
     }
 
@@ -127,63 +138,78 @@ impl Directory {
         self.traverse(
             PathBuf::from("."),
             &|_, _, current| {
-            if let ContentMutRef::Directory(d) = current {
-                // somehow denote that the parent does not yet exist,
-                // possibly recursively create directories where needed
+                if let ContentMutRef::Directory(d) = current {
+                    // somehow denote that the parent does not yet exist,
+                    // possibly recursively create directories where needed
 
-                // TODO : optimise the match arms
-                let mut c_mod_map_lock = c_mod_map.lock().unwrap();
-                if let Some(c_modifications) = c_mod_map_lock.get(&d.path.to_string_lossy().to_string()) {
-                    let c_clone = c_modifications.clone();
+                    // TODO : optimise the match arms
+                    let mut c_mod_map_lock = c_mod_map.lock().unwrap();
+                    if let Some(c_modifications) =
+                        c_mod_map_lock.get(&d.path.to_string_lossy().to_string())
+                    {
+                        let c_clone = c_modifications.clone();
 
-                    // deals with additions
-                    d.content.append(&mut recursive_birth(&PathBuf::from(d.path.clone()), &mut c_mod_map_lock));
+                        // deals with additions
+                        d.content.append(&mut recursive_birth(
+                            &PathBuf::from(d.path.clone()),
+                            &mut c_mod_map_lock,
+                        ));
 
-                    let mut deleted_containers = HashSet::new();
-                    // deals with subtractions
-                    for c_mod in &c_clone {
-                        match c_mod {
-                            ContainerModification::DeleteDirectory(_, n) => {
-                                deleted_containers.insert(n);
+                        let mut deleted_containers = HashSet::new();
+                        // deals with subtractions
+                        for c_mod in &c_clone {
+                            match c_mod {
+                                ContainerModification::DeleteDirectory(_, n) => {
+                                    deleted_containers.insert(n);
+                                }
+                                ContainerModification::DeleteFile(_, n) => {
+                                    deleted_containers.insert(n);
+                                }
+                                _ => {}
                             }
-                            ContainerModification::DeleteFile(_, n) => {
-                                deleted_containers.insert(n);
-                            },
-                            _ => {}
                         }
-                    }
 
-                    d.content = d.content
-                        .iter()
-                        .filter(|x|
-                            !deleted_containers
-                                .contains(match x {
+                        d.content = d
+                            .content
+                            .iter()
+                            .filter(|x| {
+                                !deleted_containers.contains(match x {
                                     Content::File(f) => &f.name,
-                                    Content::Directory(d) => &d.name
+                                    Content::Directory(d) => &d.name,
                                 })
-                        )
-                        .map(|x| x.clone())
-                        .collect::<Vec<Content>>();
+                            })
+                            .map(|x| x.clone())
+                            .collect::<Vec<Content>>();
+                    }
                 }
-            }
-        }, &Directory::new());
+            },
+            &Directory::new(),
+        );
 
         self.traverse(
             PathBuf::from("."),
             &|path, _, current| {
-            if let ContentMutRef::File(f) = current {
-                if let Some(modifications) = mod_map
-                    .get(&path.to_string_lossy().to_string())
-                    .map_or(None, |x| x.get(&f.name)) {
-                    f.apply_changes(modifications);
+                if let ContentMutRef::File(f) = current {
+                    if let Some(modifications) = mod_map
+                        .get(&path.to_string_lossy().to_string())
+                        .map_or(None, |x| x.get(&f.name))
+                    {
+                        f.apply_changes(modifications);
+                    }
                 }
-            }
-        }, &self.clone());
+            },
+            &self.clone(),
+        );
 
-        pub fn recursive_birth(parent_directory: &PathBuf, c_mod_map: &mut HashMap<String, HashSet<ContainerModification>>) -> Vec<Content> {
+        pub fn recursive_birth(
+            parent_directory: &PathBuf,
+            c_mod_map: &mut HashMap<String, HashSet<ContainerModification>>,
+        ) -> Vec<Content> {
             // pass the new directory's parent directory
             let mut result = vec![];
-            if let Some(c_modifications) = c_mod_map.get_mut(&parent_directory.to_string_lossy().to_string()) {
+            if let Some(c_modifications) =
+                c_mod_map.get_mut(&parent_directory.to_string_lossy().to_string())
+            {
                 let c_clone = c_modifications.clone();
                 for c in &c_clone {
                     c_modifications.remove(&c);
@@ -196,16 +222,16 @@ impl Directory {
                                 name: n.clone(),
                                 content: recursive_birth(
                                     &parent_directory.join(n.clone()),
-                                    c_mod_map
-                                )
+                                    c_mod_map,
+                                ),
                             }));
-                        },
+                        }
                         ContainerModification::CreateFile(p, n) => {
                             result.push(Content::File(File {
                                 name: n.clone(),
-                                content: "".to_string()
+                                content: "".to_string(),
                             }))
-                        },
+                        }
                         _ => {}
                     }
                 }
@@ -216,8 +242,8 @@ impl Directory {
 
     pub fn traverse<F>(&mut self, root_path: PathBuf, func: &F, parent: &Directory)
     where
-    // parent path, parent directory, current content
-        F: Fn(&PathBuf, &Directory, ContentMutRef)
+        // parent path, parent directory, current content
+        F: Fn(&PathBuf, &Directory, ContentMutRef),
     {
         func(&root_path, &parent, ContentMutRef::Directory(self));
 
@@ -226,7 +252,7 @@ impl Directory {
             match content {
                 Content::Directory(d) => {
                     d.traverse(root_path.join(d.name.clone()), func, &c);
-                },
+                }
                 Content::File(f) => {
                     func(&root_path, &c, ContentMutRef::File(f));
                 }

@@ -9,12 +9,12 @@ pub struct Relic {
     //      now.changes
     //      root
     //      upstream
-    pub upstream: State
+    pub upstream: State,
 }
 impl Relic {
     pub fn empty() -> Relic {
         Relic {
-            upstream: State::empty()
+            upstream: State::empty(),
         }
     }
 }

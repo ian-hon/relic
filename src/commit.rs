@@ -2,7 +2,12 @@ use std::{collections::HashSet, fs, path::PathBuf};
 
 use clap::ArgMatches;
 
-use crate::{change::Change, content_set::{ContentSet, TrackingSet}, state::State, utils};
+use crate::{
+    change::Change,
+    content_set::{ContentSet, TrackingSet},
+    state::State,
+    utils,
+};
 
 pub struct Commit {
     pub id: Option<u32>,
@@ -11,12 +16,14 @@ pub struct Commit {
     pub change: Change,
     pub timestamp: u128,
 
-    pub author: String
+    pub author: String,
 }
 impl Commit {
     pub fn serialise(&self) -> String {
-        format!("= {} {} {:?} {:?} {}\n{}",
-            self.id.map_or("LOCAL".to_string(), |i| format!("{:06x}", i).clone()),
+        format!(
+            "= {} {} {:?} {:?} {}\n{}",
+            self.id
+                .map_or("LOCAL".to_string(), |i| format!("{:06x}", i).clone()),
             self.timestamp,
             urlencoding::encode(&self.message).to_string(),
             urlencoding::encode(&self.description).to_string(),
@@ -26,77 +33,95 @@ impl Commit {
     }
 }
 
-
 pub fn add(_: &mut State, args: &ArgMatches) {
-    let f = args.get_many::<PathBuf>("FILE").unwrap().map(|x| x.clone()).collect::<Vec<PathBuf>>();
+    let f = args
+        .get_many::<PathBuf>("FILE")
+        .unwrap()
+        .map(|x| x.clone())
+        .collect::<Vec<PathBuf>>();
 
     let mut result: HashSet<String> = HashSet::from_iter(
         fs::read_to_string("./.relic/tracked")
-        .unwrap()
-        .split("\n")
-        .filter(|x| !x.is_empty())
-        .map(|x| x.to_string())
-        .collect::<Vec<String>>()
+            .unwrap()
+            .split("\n")
+            .filter(|x| !x.is_empty())
+            .map(|x| x.to_string())
+            .collect::<Vec<String>>(),
     );
     for p in f {
         // TODO : path.join for this? or concatenating / works?
-        result.insert(format!("{}{}", p.to_string_lossy().to_string(), if !p.to_string_lossy().to_string().ends_with("/") && p.is_dir() { "/" } else { "" }));
+        result.insert(format!(
+            "{}{}",
+            p.to_string_lossy().to_string(),
+            if !p.to_string_lossy().to_string().ends_with("/") && p.is_dir() {
+                "/"
+            } else {
+                ""
+            }
+        ));
     }
-    let _ = fs::write("./.relic/tracked", result
-        .drain()
-        .collect::<Vec<String>>()
-        .join("\n")
+    let _ = fs::write(
+        "./.relic/tracked",
+        result.drain().collect::<Vec<String>>().join("\n"),
     );
 }
 
 pub fn remove(s: &mut State, args: &ArgMatches) {
-    let f = args.get_many::<PathBuf>("FILE").unwrap().map(|x| x.clone()).collect::<Vec<PathBuf>>();
+    let f = args
+        .get_many::<PathBuf>("FILE")
+        .unwrap()
+        .map(|x| x.clone())
+        .collect::<Vec<PathBuf>>();
 
     let mut result: HashSet<String> = HashSet::from_iter(
         fs::read_to_string("./.relic/tracked")
-        .unwrap()
-        .split("\n")
-        .filter(|x| !x.is_empty())
-        .map(|x| PathBuf::from(".").join(x).to_string_lossy().to_string())
-        .collect::<Vec<String>>()
+            .unwrap()
+            .split("\n")
+            .filter(|x| !x.is_empty())
+            .map(|x| PathBuf::from(".").join(x).to_string_lossy().to_string())
+            .collect::<Vec<String>>(),
     );
 
     // initialise removed_content
     let mut removed_content = ContentSet {
         files: HashSet::from_iter(
-            f
-                .iter()
+            f.iter()
                 .filter(|x| !x.is_dir())
-                .map(|x| PathBuf::from(".").join(x).to_string_lossy().to_string())
+                .map(|x| PathBuf::from(".").join(x).to_string_lossy().to_string()),
         ),
         directories: HashSet::from_iter(
-            f
-                .iter()
+            f.iter()
                 .filter(|x| x.is_dir())
-                .map(|x| PathBuf::from(".").join(x).to_string_lossy().to_string())
-        )
+                .map(|x| PathBuf::from(".").join(x).to_string_lossy().to_string()),
+        ),
     }
     .initialise(&mut s.current);
 
     let mut to_subtract: HashSet<String> = HashSet::from_iter(
-        removed_content.directories
+        removed_content
+            .directories
             .drain()
-            .collect::<Vec<String>>()        
+            .collect::<Vec<String>>()
             .into_iter()
             .map(|x| format!("{x}/"))
-            .collect::<Vec<String>>()
+            .collect::<Vec<String>>(),
     );
-    to_subtract = to_subtract.union(&HashSet::from_iter(removed_content.files.drain())).map(|x| x.to_string()).collect::<HashSet<String>>();
+    to_subtract = to_subtract
+        .union(&HashSet::from_iter(removed_content.files.drain()))
+        .map(|x| x.to_string())
+        .collect::<HashSet<String>>();
 
     // set operations
     // right join
     // result - removed_content
 
-    let _ = fs::write("./.relic/tracked", result
-        .difference(&to_subtract)
-        .map(|x| x[2..].to_string())
-        .collect::<Vec<String>>()
-        .join("\n")
+    let _ = fs::write(
+        "./.relic/tracked",
+        result
+            .difference(&to_subtract)
+            .map(|x| x[2..].to_string())
+            .collect::<Vec<String>>()
+            .join("\n"),
     );
 }
 
@@ -105,7 +130,7 @@ pub fn commit(state: &mut State, args: &ArgMatches) {
     // update upstream
 
     // everything after the first line will be generated by Change::serialise_change
-r#"= {commit id} {unix timestamp of commit} {message} {description} {author}
+    r#"= {commit id} {unix timestamp of commit} {message} {description} {author}
 + D "lorem/ipsum/dolor"
 + F "lorem/ipsum/dolor/earth.txt" "earth.txt"
 - D "lorem/sit"
@@ -117,7 +142,9 @@ r#"= {commit id} {unix timestamp of commit} {message} {description} {author}
 | "lorem/ipsum/saturn/txt"
 + 4 lsdfljs"#;
     let message = args.get_one::<String>("message").unwrap().clone();
-    let description = args.get_one::<String>("description").map_or("".to_string(), String::clone);
+    let description = args
+        .get_one::<String>("description")
+        .map_or("".to_string(), String::clone);
 
     let commit = Commit {
         id: None,
@@ -125,7 +152,7 @@ r#"= {commit id} {unix timestamp of commit} {message} {description} {author}
         description,
         change: state.get_changes(),
         timestamp: utils::get_time(),
-        author: "no_one".to_string()
+        author: "no_one".to_string(),
     };
 
     state.pending_add(commit);
@@ -133,22 +160,12 @@ r#"= {commit id} {unix timestamp of commit} {message} {description} {author}
     (*state).update_upstream(&mut state.track_set.clone());
 }
 
-pub fn push(state: &mut State, args: &ArgMatches) {
+pub fn push(state: &mut State, args: &ArgMatches) {}
 
-}
+pub fn pull(state: &mut State, args: &ArgMatches) {}
 
-pub fn pull(state: &mut State, args: &ArgMatches) {
+pub fn fetch(state: &mut State, args: &ArgMatches) {}
 
-}
+pub fn cherry(state: &mut State, args: &ArgMatches) {}
 
-pub fn fetch(state: &mut State, args: &ArgMatches) {
-
-}
-
-pub fn cherry(state: &mut State, args: &ArgMatches) {
-    
-}
-
-pub fn rollback(state: &mut State, args: &ArgMatches) {
-
-}
+pub fn rollback(state: &mut State, args: &ArgMatches) {}

@@ -4,5 +4,5 @@ use serde::{Deserialize, Serialize};
 pub enum RelicError {
     FileCantOpen,
     IgnoredFile,
-    ConfigurationIncorrect
+    ConfigurationIncorrect,
 }
