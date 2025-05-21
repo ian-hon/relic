@@ -1,7 +1,7 @@
 use std::{
     collections::{HashMap, HashSet},
     fs,
-    path::{Path, PathBuf},
+    path::PathBuf,
     sync::{Arc, Mutex},
 };
 
@@ -10,7 +10,6 @@ use serde::{Deserialize, Serialize};
 use crate::{
     change::{Change, ContainerModification, Modification},
     error::RelicError,
-    utils,
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -216,7 +215,7 @@ impl Directory {
                 }
                 for c_mod in c_clone {
                     match c_mod {
-                        ContainerModification::CreateDirectory(p, n) => {
+                        ContainerModification::CreateDirectory(_, n) => {
                             result.push(Content::Directory(Directory {
                                 path: parent_directory.join(n.clone()),
                                 name: n.clone(),
@@ -226,7 +225,7 @@ impl Directory {
                                 ),
                             }));
                         }
-                        ContainerModification::CreateFile(p, n) => {
+                        ContainerModification::CreateFile(_, n) => {
                             result.push(Content::File(File {
                                 name: n.clone(),
                                 content: "".to_string(),

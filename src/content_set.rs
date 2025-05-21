@@ -6,7 +6,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::content::{Content, ContentMutRef, Directory};
+use crate::content::{ContentMutRef, Directory};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ContentSet {

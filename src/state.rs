@@ -3,11 +3,10 @@ use std::{
     collections::HashSet,
     fs,
     path::{Path, PathBuf},
-    sync::{Arc, Mutex},
 };
 
 use crate::{
-    change::{Change, ContainerModification, Modification},
+    change::Change,
     commit::Commit,
     content::{Content, Directory, File},
     content_set::{ContentSet, IgnoreSet, TrackingSet},

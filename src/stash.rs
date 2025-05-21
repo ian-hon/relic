@@ -2,6 +2,6 @@ use clap::ArgMatches;
 
 use crate::state::State;
 
-pub fn stash(state: &mut State, args: &ArgMatches) {}
+pub fn stash(_: &mut State, _: &ArgMatches) {}
 
-pub fn restore(state: &mut State, args: &ArgMatches) {}
+pub fn restore(_: &mut State, _: &ArgMatches) {}

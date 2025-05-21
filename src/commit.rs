@@ -73,7 +73,7 @@ pub fn remove(s: &mut State, args: &ArgMatches) {
         .map(|x| x.clone())
         .collect::<Vec<PathBuf>>();
 
-    let mut result: HashSet<String> = HashSet::from_iter(
+    let result: HashSet<String> = HashSet::from_iter(
         fs::read_to_string("./.relic/tracked")
             .unwrap()
             .split("\n")
@@ -160,12 +160,12 @@ pub fn commit(state: &mut State, args: &ArgMatches) {
     (*state).update_upstream(&mut state.track_set.clone());
 }
 
-pub fn push(state: &mut State, args: &ArgMatches) {}
+pub fn push(_: &mut State, _: &ArgMatches) {}
 
-pub fn pull(state: &mut State, args: &ArgMatches) {}
+pub fn pull(_: &mut State, _: &ArgMatches) {}
 
-pub fn fetch(state: &mut State, args: &ArgMatches) {}
+pub fn fetch(_: &mut State, _: &ArgMatches) {}
 
-pub fn cherry(state: &mut State, args: &ArgMatches) {}
+pub fn cherry(_: &mut State, _: &ArgMatches) {}
 
-pub fn rollback(state: &mut State, args: &ArgMatches) {}
+pub fn rollback(_: &mut State, _: &ArgMatches) {}
