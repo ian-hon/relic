@@ -9,6 +9,7 @@ use crate::{
     utils,
 };
 
+#[derive(Debug)]
 pub struct Commit {
     pub id: Option<u32>,
     pub message: String,
@@ -30,6 +31,37 @@ impl Commit {
             self.author,
             self.change.serialise_changes()
         )
+    }
+
+    pub fn deserialise(s: String) -> Option<Commit> {
+        // = LOCAL 1747682692319414000 "initial%20commit" "" no_one
+
+        let lines = s.split("\n").collect::<Vec<&str>>();
+        if lines.len() < 2 {
+            // return None;
+        }
+
+        let metadata = lines[0].split(" ").collect::<Vec<&str>>();
+        if metadata.len() != 6 {
+            // return None;
+        }
+
+        let [_, status, time, message, description, author] = *metadata.as_slice() else {
+            return None;
+        };
+
+        Some(Commit {
+            id: status.parse::<u32>().map_or(None, |t| Some(t)),
+            message: urlencoding::decode(&message[1..message.len() - 1].to_string())
+                .unwrap()
+                .to_string(),
+            description: urlencoding::decode(&description[1..description.len() - 1].to_string())
+                .unwrap()
+                .to_string(),
+            change: Change::deserialise_changes(lines[1..].join("\n")).unwrap_or(Change::empty()),
+            timestamp: time.parse::<u128>().unwrap_or(0),
+            author: author.to_string(),
+        })
     }
 }
 
@@ -169,3 +201,14 @@ pub fn fetch(_: &mut State, _: &ArgMatches) {}
 pub fn cherry(_: &mut State, _: &ArgMatches) {}
 
 pub fn rollback(_: &mut State, _: &ArgMatches) {}
+
+pub fn pending(_: &mut State, args: &ArgMatches) {
+    if let Some(commit_number) = args
+        .get_one::<String>("COMMIT")
+        .map_or(None, |x| x.parse::<i32>().map_or(None, |x| Some(x)))
+    {
+        println!("selected commit : {commit_number}");
+    } else {
+        println!("none selected");
+    }
+}

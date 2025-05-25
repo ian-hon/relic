@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fs;
 use std::path::PathBuf;
 
 mod content_set;
@@ -15,7 +16,7 @@ mod change;
 mod content;
 
 use clap::{arg, value_parser, ArgMatches, Command};
-use commit::remove;
+use commit::{pending, remove};
 use content_set::TrackingSet;
 use utils::generate_tree;
 
@@ -151,7 +152,12 @@ pushing and pulling, are implemented."#,
                         .serialise_changes()
                 );
             },
-            Command::new("staging").about("View all staging changes"),
+            Command::new("staging").about("View all staging changes."),
+        ),
+        (
+            pending,
+            Command::new("pending").about("View all pending commits.")
+                .arg(arg!([COMMIT]... "Commit number."))
         ),
         (
             |s, _| {

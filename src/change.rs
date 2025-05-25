@@ -17,17 +17,18 @@ pub struct Change {
     pub modifications: Vec<Modification>,
 }
 impl Change {
+    pub fn get_hash(&self) -> String {
+        sha256::digest(self.serialise_changes())
+    }
+
     pub fn serialise_changes(&self) -> String {
-        // + D "lorem/ipsum/dolor"
-        // + F "lorem/ipsum/dolor/earth.txt" "earth.txt"
-        // - D "lorem/sit"
+        // + D . src
+        // + F .%2Fsrc utils.rs
+        // + F .%2Fsrc branch.rs
         // =
-        // | "lorem/ipsum/dolor/earth.txt"
-        // + 3 asdfsdf
-        // + 5 sfsdf
-        // - 7
-        // | "lorem/ipsum/saturn/txt"
-        // + 4 lsdfljs
+        // | .%2Fsrc content.rs
+        // + 0 "use std::{collections::{HashMap, HashSet}, fs, path::{Path, PathBuf}, sync::{Arc, Mutex}};"
+        // + 1 ""
 
         let mut result: Vec<String> = vec![];
 
@@ -75,7 +76,16 @@ impl Change {
             map.entry(path).or_insert(vec![]).push(modification.clone());
         }
 
-        for ((path, name), modifications) in map {
+        let mut keys = map
+            .iter()
+            .map(|x| x.0.clone())
+            .collect::<Vec<(String, String)>>();
+
+        // map.sort_by_key(|x| x.0.clone());
+        keys.sort();
+
+        for (path, name) in keys {
+            let modifications = map.get(&(path.clone(), name.clone())).unwrap();
             result.push(format!(
                 "| {} {}",
                 urlencoding::encode(&path).to_string(),
@@ -90,6 +100,130 @@ impl Change {
         }
 
         result.join("\n")
+    }
+
+    pub fn deserialise_changes(s: String) -> Option<Change> {
+        // + D . src
+        // + F .%2Fsrc utils.rs
+        // + F .%2Fsrc branch.rs
+        // =
+        // | .%2Fsrc content.rs
+        // + 0 "use std::{collections::{HashMap, HashSet}, fs, path::{Path, PathBuf}, sync::{Arc, Mutex}};"
+        // + 1 ""
+
+        let lines = s
+            .split("\n")
+            .map(|x| x.to_string())
+            .collect::<Vec<String>>();
+
+        let mut result = Change::empty();
+        let mut container_section = true;
+
+        let mut previous_file = None;
+        for l in lines {
+            if container_section && (l == "=") {
+                container_section = false;
+                continue;
+            }
+            let content = l.split(" ").collect::<Vec<&str>>();
+
+            if container_section {
+                let [species, container, parent, name] = *content.as_slice() else {
+                    return None;
+                };
+
+                result
+                    .container_modifications
+                    .push(match (species, container) {
+                        ("+", "D") => ContainerModification::CreateDirectory(
+                            urlencoding::decode(parent).unwrap().to_string(),
+                            urlencoding::decode(name).unwrap().to_string(),
+                        ),
+                        ("-", "D") => ContainerModification::DeleteDirectory(
+                            urlencoding::decode(parent).unwrap().to_string(),
+                            urlencoding::decode(name).unwrap().to_string(),
+                        ),
+                        ("+", "F") => ContainerModification::CreateFile(
+                            urlencoding::decode(parent).unwrap().to_string(),
+                            urlencoding::decode(name).unwrap().to_string(),
+                        ),
+                        ("-", "F") => ContainerModification::DeleteFile(
+                            urlencoding::decode(parent).unwrap().to_string(),
+                            urlencoding::decode(name).unwrap().to_string(),
+                        ),
+                        _ => {
+                            println!("invalid c_mod");
+                            return None;
+                        }
+                    });
+            } else {
+                if content[0] == "|" {
+                    // | .%2Fsrc content.rs
+                    let [_, parent, name] = *content.as_slice() else {
+                        println!("invalid file header");
+                        return None;
+                    };
+
+                    previous_file = Some((parent.to_string(), name.to_string()));
+                } else {
+                    // + 0 "use std::{collections::{HashMap, HashSet}, fs, path::{Path, PathBuf}, sync::{Arc, Mutex}};"
+                    if content.len() < 2 {
+                        println!("invalid change line");
+                        return None;
+                    }
+
+                    let species = content[0];
+                    let line = match content[1].parse::<usize>() {
+                        Ok(i) => i,
+                        _ => {
+                            println!("invalid line index");
+                            return None;
+                        }
+                    };
+
+                    if let Some((p, _)) = &previous_file {
+                        if (p == "+") && (content.len() < 3) {
+                            return None;
+                        }
+                    }
+
+                    match &previous_file {
+                        Some((p, n)) => match species {
+                            "+" => {
+                                let s = unescape::unescape(&content[2..].join(" ")).unwrap();
+
+                                result.modifications.push(Modification::Create(
+                                    urlencoding::decode(p).unwrap().to_string(),
+                                    urlencoding::decode(n).unwrap().to_string(),
+                                    line,
+                                    s[1..s.len() - 1].to_string(),
+                                ));
+                            }
+                            "-" => result.modifications.push(Modification::Delete(
+                                urlencoding::decode(p).unwrap().to_string(),
+                                urlencoding::decode(n).unwrap().to_string(),
+                                line,
+                            )),
+                            _ => {
+                                return None;
+                            }
+                        },
+                        None => {
+                            return None;
+                        }
+                    }
+                }
+            }
+        }
+
+        Some(result)
+    }
+
+    pub fn empty() -> Change {
+        Change {
+            container_modifications: vec![],
+            modifications: vec![],
+        }
     }
 
     pub fn get_change(
@@ -378,7 +512,7 @@ impl Change {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Modification {
     // creation/deletion of lines in files
     Create(
@@ -394,7 +528,7 @@ pub enum Modification {
     ),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ContainerModification {
     // denote that parent doesnt exist?
 

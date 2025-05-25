@@ -195,6 +195,8 @@ impl State {
 
     // #region pending
     pub fn pending_add(&self, commit: Commit) {
+        // TODO : use numbering for file name
+        // who knows if two commits are created in the same nanosecond
         let _ = fs::write(
             format!(".relic/pending/{}.diff", commit.timestamp),
             commit.serialise(),
