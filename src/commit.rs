@@ -15,11 +15,35 @@ pub struct Commit {
     pub message: String,
     pub description: String,
     pub change: Change,
-    pub timestamp: u128,
+    pub timestamp: u64,
 
     pub author: String,
 }
 impl Commit {
+    pub fn header(&self) -> String {
+        // "integrated backwards compatibility" (2025-5-26 16:30) (affected : change.rs, content.rs, ...)
+
+        let mut file_names = vec![];
+        for (_, parent) in self.change.as_map().1 {
+            for (f, _) in parent {
+                file_names.push(f);
+            }
+        }
+
+        format!(
+            "({}) \"{}\" (affected : {}{})",
+            utils::into_human_readable(self.timestamp),
+            self.message,
+            file_names
+                .iter()
+                .take(5)
+                .map(|x| x.to_string())
+                .collect::<Vec<String>>()
+                .join(", "),
+            if file_names.len() > 5 { ", ..." } else { "" }
+        )
+    }
+
     pub fn serialise(&self) -> String {
         format!(
             "= {} {} {:?} {:?} {}\n{}",
@@ -59,7 +83,7 @@ impl Commit {
                 .unwrap()
                 .to_string(),
             change: Change::deserialise_changes(lines[1..].join("\n")).unwrap_or(Change::empty()),
-            timestamp: time.parse::<u128>().unwrap_or(0),
+            timestamp: time.parse::<u64>().unwrap_or(0),
             author: author.to_string(),
         })
     }
@@ -202,13 +226,27 @@ pub fn cherry(_: &mut State, _: &ArgMatches) {}
 
 pub fn rollback(_: &mut State, _: &ArgMatches) {}
 
-pub fn pending(_: &mut State, args: &ArgMatches) {
+pub fn pending(state: &mut State, args: &ArgMatches) {
+    let pending = state.pending_get();
+
     if let Some(commit_number) = args
         .get_one::<String>("COMMIT")
         .map_or(None, |x| x.parse::<i32>().map_or(None, |x| Some(x)))
     {
-        println!("selected commit : {commit_number}");
+        // display selected
+        if (commit_number < 0) || (commit_number >= pending.len() as i32) {
+            println!(
+                "Invalid selection. Please select commit numbers in the range of (0-{})",
+                pending.len() - 1
+            );
+            return;
+        }
+
+        println!("{}", pending[commit_number as usize].serialise());
     } else {
-        println!("none selected");
+        // display all
+        for (index, c) in pending.iter().enumerate() {
+            println!("{index}. {}", c.header());
+        }
     }
 }

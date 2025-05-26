@@ -202,5 +202,32 @@ impl State {
             commit.serialise(),
         );
     }
+
+    pub fn pending_get(&self) -> Vec<Commit> {
+        let directories = if let Ok(d) = fs::read_dir(".relic/pending") {
+            d
+        } else {
+            return vec![];
+        };
+
+        let mut result = vec![];
+
+        for d in directories {
+            let d = if let Ok(d) = d { d } else { continue };
+            let p = if let Ok(p) = fs::read_to_string(d.path()) {
+                p
+            } else {
+                continue;
+            };
+
+            if let Some(c) = Commit::deserialise(p) {
+                result.push(c);
+            }
+        }
+
+        result.sort_by_key(|c| c.timestamp);
+
+        result
+    }
     // #endregion
 }

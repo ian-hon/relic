@@ -1,4 +1,6 @@
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+use chrono::{DateTime, Utc};
 
 use crate::content::{Content, Directory};
 
@@ -46,9 +48,16 @@ fn fetch_contents(c: &Content) -> String {
     result.join("\n")
 }
 
-pub fn get_time() -> u128 {
+pub fn get_time() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("time went backwards (???)")
-        .as_nanos() as u128
+        .as_millis() as u64
+}
+
+pub fn into_human_readable(t: u64) -> String {
+    // accepts unix time, but only in milliseconds format
+    DateTime::<Utc>::from(UNIX_EPOCH + Duration::from_millis(t as u64))
+        .format("%Y-%m-%d %H:%M:%S")
+        .to_string()
 }
