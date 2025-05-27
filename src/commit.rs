@@ -9,7 +9,7 @@ use crate::{
     utils,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Commit {
     pub id: Option<u32>,
     pub message: String,

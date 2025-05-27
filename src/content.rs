@@ -80,7 +80,7 @@ impl File {
         let mut modifications = modifications.clone();
         modifications.sort_by_key(|m| match m {
             Modification::Create(_, _, l, _) => *l as i128,
-            Modification::Delete(_, _, l) => -(*l as i128),
+            Modification::Delete(_, _, l, _) => -(*l as i128),
         });
 
         for m in &modifications {
@@ -89,7 +89,7 @@ impl File {
                     // insert at that line
                     lines.insert(*line, content.clone());
                 }
-                Modification::Delete(_, _, line) => {
+                Modification::Delete(_, _, line, _) => {
                     // delete that line
                     lines.remove(*line);
                 }
@@ -114,6 +114,10 @@ impl Directory {
             name: "".to_string(),
             content: vec![],
         }
+    }
+
+    pub fn get_hash(&self) -> String {
+        sha256::digest(serde_json::to_string(&self).unwrap())
     }
 
     pub fn deserialise(s: String) -> Option<Directory> {
@@ -237,6 +241,12 @@ impl Directory {
             }
             result
         }
+    }
+
+    pub fn unapply_changes(&mut self, changes: Change) {
+        // TODO : test if 100% reliable
+        let changes = changes.inverse();
+        self.apply_changes(changes);
     }
 
     pub fn traverse<F>(&mut self, root_path: PathBuf, func: &F, parent: &Directory)

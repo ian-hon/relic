@@ -71,7 +71,7 @@ impl Change {
         for modification in &self.modifications {
             let path = match modification {
                 Modification::Create(path, name, _, _) => (path.clone(), name.clone()),
-                Modification::Delete(path, name, _) => (path.clone(), name.clone()),
+                Modification::Delete(path, name, _, _) => (path.clone(), name.clone()),
             };
             map.entry(path).or_insert(vec![]).push(modification.clone());
         }
@@ -94,7 +94,7 @@ impl Change {
             for m in modifications {
                 result.push(match m {
                     Modification::Create(_, _, line, content) => format!("+ {line} {content:?}"),
-                    Modification::Delete(_, _, line) => format!("- {line}"),
+                    Modification::Delete(_, _, line, content) => format!("- {line} {content:?}"),
                 })
             }
         }
@@ -182,7 +182,7 @@ impl Change {
                     };
 
                     if let Some((p, _)) = &previous_file {
-                        if (p == "+") && (content.len() < 3) {
+                        if content.len() < 3 {
                             return None;
                         }
                     }
@@ -199,11 +199,15 @@ impl Change {
                                     s[1..s.len() - 1].to_string(),
                                 ));
                             }
-                            "-" => result.modifications.push(Modification::Delete(
-                                urlencoding::decode(p).unwrap().to_string(),
-                                urlencoding::decode(n).unwrap().to_string(),
-                                line,
-                            )),
+                            "-" => {
+                                let s = unescape::unescape(&content[2..].join(" ")).unwrap();
+                                result.modifications.push(Modification::Delete(
+                                    urlencoding::decode(p).unwrap().to_string(),
+                                    urlencoding::decode(n).unwrap().to_string(),
+                                    line,
+                                    s[1..s.len() - 1].to_string(),
+                                ))
+                            }
                             _ => {
                                 return None;
                             }
@@ -258,6 +262,7 @@ impl Change {
                     path.clone(),
                     current_file.name.clone(),
                     change.old_index().unwrap(),
+                    change.to_string().strip_suffix("\n").unwrap().to_string(),
                 ),
                 ChangeTag::Insert => Modification::Create(
                     path.clone(),
@@ -466,7 +471,7 @@ impl Change {
         for modification in &self.modifications {
             let (parent_directory, file_name) = match modification {
                 Modification::Create(path, name, _, _) => (path.clone(), name.clone()),
-                Modification::Delete(path, name, _) => (path.clone(), name.clone()),
+                Modification::Delete(path, name, _, _) => (path.clone(), name.clone()),
             };
             mod_map
                 .entry(parent_directory)
@@ -502,12 +507,54 @@ impl Change {
                 .into_iter()
                 .filter(|m| {
                     filter.files.contains(&match m {
-                        Modification::Create(p, n, _, _) | Modification::Delete(p, n, _) => {
+                        Modification::Create(p, n, _, _) | Modification::Delete(p, n, _, _) => {
                             PathBuf::from(p).join(n).to_string_lossy().to_string()
                         }
                     })
                 })
                 .collect(),
+        }
+    }
+
+    pub fn inverse(&self) -> Change {
+        // returns inverse of the change
+        // all additions are deletions and vice versa
+
+        // the order does not follow the optimised/intuitive format
+        // additions will appear before deletions if inversed
+        // but relic will always apply changes in the correct order regardless
+
+        Change {
+            container_modifications: self
+                .container_modifications
+                .iter()
+                .map(|c| match c {
+                    ContainerModification::CreateFile(p, n) => {
+                        ContainerModification::DeleteFile(p.to_string(), n.to_string())
+                    }
+                    ContainerModification::CreateDirectory(p, n) => {
+                        ContainerModification::DeleteDirectory(p.to_string(), n.to_string())
+                    }
+                    ContainerModification::DeleteFile(p, n) => {
+                        ContainerModification::CreateFile(p.to_string(), n.to_string())
+                    }
+                    ContainerModification::DeleteDirectory(p, n) => {
+                        ContainerModification::CreateDirectory(p.to_string(), n.to_string())
+                    }
+                })
+                .collect::<Vec<ContainerModification>>(),
+            modifications: self
+                .modifications
+                .iter()
+                .map(|m| match m {
+                    Modification::Create(p, f, l, t) => {
+                        Modification::Delete(p.to_string(), f.to_string(), *l, t.to_string())
+                    }
+                    Modification::Delete(p, f, l, t) => {
+                        Modification::Create(p.to_string(), f.to_string(), *l, t.to_string())
+                    }
+                })
+                .collect::<Vec<Modification>>(),
         }
     }
 }
@@ -525,6 +572,7 @@ pub enum Modification {
         String, // parent directory
         String, // file name
         usize,  // line
+        String, // text
     ),
 }
 
