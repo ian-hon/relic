@@ -9,6 +9,8 @@ use crate::{
     utils,
 };
 
+const PENDING_TAG: &str = "LOCAL";
+
 #[derive(Debug, Clone)]
 pub struct Commit {
     pub id: Option<u32>,
@@ -20,6 +22,10 @@ pub struct Commit {
     pub author: String,
 }
 impl Commit {
+    pub fn hash(&self) -> String {
+        sha256::digest(self.serialise())
+    }
+
     pub fn header(&self) -> String {
         // "integrated backwards compatibility" (2025-5-26 16:30) (affected : change.rs, content.rs, ...)
 
@@ -48,7 +54,7 @@ impl Commit {
         format!(
             "= {} {} {:?} {:?} {}\n{}",
             self.id
-                .map_or("LOCAL".to_string(), |i| format!("{:06x}", i).clone()),
+                .map_or(PENDING_TAG.to_string(), |i| format!("{:06x}", i).clone()),
             self.timestamp,
             urlencoding::encode(&self.message).to_string(),
             urlencoding::encode(&self.description).to_string(),

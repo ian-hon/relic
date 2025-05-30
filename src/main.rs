@@ -17,6 +17,7 @@ mod content;
 use clap::{arg, value_parser, ArgMatches, Command};
 use commit::{pending, remove};
 use content_set::TrackingSet;
+use state::init;
 use utils::generate_tree;
 
 use crate::branch::branch;
@@ -41,8 +42,6 @@ use crate::state::State;
 // rollback
 //      resets to current head
 // cherry {commit hash}
-
-pub fn init(_: &mut State, _: &ArgMatches) {}
 
 fn main() {
     let mut command_handler = Command::new("relic")
@@ -69,6 +68,14 @@ pushing and pulling, are implemented."#,
         (
             init,
             Command::new("init").about("Initialises a Relic repository in the current directory."),
+        ),
+        (
+            state::clone,
+            Command::new("clone").about("Clone a remote Relic repository in the current directory.")
+        ),
+        (
+            |_, _| {},
+            Command::new("detach").about("Completely removes Relic from the current directory.")
         ),
         (
             add,
@@ -175,21 +182,36 @@ pushing and pulling, are implemented."#,
         command_handler = command_handler.subcommand(c);
     }
 
-    match State::create(PathBuf::from(".")) {
-        Ok(mut s) => {
-            let c = command_handler.get_matches();
-            let (command_name, sub_matches) = c.subcommand().unwrap();
+    let s = State::create(PathBuf::from("."));
+
+    let c = command_handler.get_matches();
+    let (command_name, sub_matches) = c.subcommand().unwrap();
+
+    // TODO : shorten and undry this
+    if let Ok(mut s) = s {
+        match commands.get(command_name) {
+            Some(command) => {
+                command(&mut s, sub_matches);
+            }
+            None => {
+                unimplemented!("Relic Error, command not defined.");
+            }
+        }
+    } else {
+        // let this run only for
+        // clone, init
+        if vec!["clone", "init"].contains(&command_name) {
             match commands.get(command_name) {
                 Some(command) => {
-                    command(&mut s, sub_matches);
+                    command(&mut State::empty(), sub_matches);
                 }
                 None => {
                     unimplemented!("Relic Error, command not defined.");
                 }
             }
-        }
-        Err(e) => {
-            panic!("main.rs (main) {e:?} error encountered.");
+        } else {
+            println!("No Relic repository found in current directory. Consider executing 'relic init' or 'relic clone'.");
+            return;
         }
     }
 }

@@ -8,6 +8,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::content::{ContentMutRef, Directory};
 
+pub const DEFAULT_IGNORE: &str = r#"-- Added by Relic: Automatically ignore all git content
+.git/
+.gitignore"#;
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ContentSet {
     pub directories: HashSet<String>,
@@ -44,6 +48,11 @@ impl IgnoreSet for ContentSet {
                 continue;
             }
 
+            // skip comments
+            if line.starts_with("-- ") {
+                continue;
+            }
+
             // doesnt take into account cases like
             // some_directory// <- double slashes
             if line.ends_with("/") {
@@ -57,6 +66,8 @@ impl IgnoreSet for ContentSet {
                 result.files.insert(line.to_string());
             }
         }
+
+        println!("{result:?}");
 
         result
     }

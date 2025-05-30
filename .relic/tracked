@@ -1,1 +1,7 @@
-lorem/earth
+Cargo.toml
+ipsum
+lorem/
+.relic_ignore
+src/
+target/
+Cargo.lock

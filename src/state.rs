@@ -1,3 +1,4 @@
+use clap::ArgMatches;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashSet,
@@ -9,7 +10,7 @@ use crate::{
     change::Change,
     commit::Commit,
     content::{Content, Directory, File},
-    content_set::{ContentSet, IgnoreSet, TrackingSet},
+    content_set::{self, ContentSet, IgnoreSet, TrackingSet},
     error::RelicError,
 };
 
@@ -24,6 +25,8 @@ pub struct State {
 
 impl State {
     pub fn empty() -> State {
+        // needs to store current upstream commit
+        // local commits assigned an id?
         State {
             current: Directory::new(),
             upstream: Directory::new(),
@@ -109,9 +112,9 @@ impl State {
                     let file_name = p.file_name().into_string().unwrap();
                     let file_path = p.path();
 
-                    if file_name.starts_with(".") {
-                        continue;
-                    }
+                    // if file_name.starts_with(".") {
+                    //     continue;
+                    // }
 
                     if file_type.is_dir() {
                         if ignore_set.directories.contains(&file_name) {
@@ -231,3 +234,29 @@ impl State {
     }
     // #endregion
 }
+
+pub fn init(_: &mut State, _: &ArgMatches) {
+    // create
+    // .relic
+    //      history/ (empty)
+    //      pending/ (empty)
+    //      root (empty)
+    //      tracked (empty)
+    //      upstream (empty)
+    // .relic_ignore (use default (const in content_set))
+
+    // if origin is set
+    // update root
+    // update upstream
+
+    let _ = fs::create_dir(".relic");
+    let _ = fs::create_dir(".relic/history");
+    let _ = fs::create_dir(".relic/pending");
+    let _ = fs::write(".relic/root", "");
+    let _ = fs::write(".relic/tracked", "");
+    let _ = fs::write(".relic/pending", "");
+
+    let _ = fs::write(".relic_ignore", content_set::DEFAULT_IGNORE);
+}
+
+pub fn clone(_: &mut State, _: &ArgMatches) {}

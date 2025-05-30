@@ -1,1 +1,5 @@
+-- Added by Relic: Automatically ignore all git content
+.git/
+.gitignore
+
 target/

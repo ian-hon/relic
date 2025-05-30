@@ -181,12 +181,6 @@ impl Change {
                         }
                     };
 
-                    if let Some((p, _)) = &previous_file {
-                        if content.len() < 3 {
-                            return None;
-                        }
-                    }
-
                     match &previous_file {
                         Some((p, n)) => match species {
                             "+" => {
