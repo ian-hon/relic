@@ -49,7 +49,8 @@ impl State {
         let upstream = match fs::read_to_string(".relic/upstream") {
             Ok(data) => match Directory::deserialise(data) {
                 Some(d) => d,
-                None => return Err(RelicError::ConfigurationIncorrect),
+                // TODO : implement something better for this?
+                None => Directory::new(), // None => return Err(RelicError::ConfigurationIncorrect),
             },
             Err(_) => return Err(RelicError::FileCantOpen),
         };
@@ -255,8 +256,25 @@ pub fn init(_: &mut State, _: &ArgMatches) {
     let _ = fs::write(".relic/root", "");
     let _ = fs::write(".relic/tracked", "");
     let _ = fs::write(".relic/pending", "");
+    let _ = fs::write(
+        ".relic/upstream",
+        r#"{
+    "path": "",
+    "name": "",
+    "content": []
+}"#,
+    );
 
     let _ = fs::write(".relic_ignore", content_set::DEFAULT_IGNORE);
+
+    println!("Empty Relic repository created.");
 }
 
 pub fn clone(_: &mut State, _: &ArgMatches) {}
+
+pub fn detach(_: &mut State, _: &ArgMatches) {
+    let _ = fs::remove_dir_all(".relic");
+    let _ = fs::remove_file(".relic_ignore");
+
+    println!("Relic repository successfully removed.");
+}

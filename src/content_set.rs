@@ -67,8 +67,6 @@ impl IgnoreSet for ContentSet {
             }
         }
 
-        println!("{result:?}");
-
         result
     }
 }

@@ -74,7 +74,7 @@ pushing and pulling, are implemented."#,
             Command::new("clone").about("Clone a remote Relic repository in the current directory.")
         ),
         (
-            |_, _| {},
+            state::detach,
             Command::new("detach").about("Completely removes Relic from the current directory.")
         ),
         (
@@ -189,29 +189,40 @@ pushing and pulling, are implemented."#,
 
     // TODO : shorten and undry this
     if let Ok(mut s) = s {
-        match commands.get(command_name) {
-            Some(command) => {
-                command(&mut s, sub_matches);
+        match command_name {
+            "clone" | "init" => {
+                // let this run only for
+                // clone, init
+                println!("Unable to '{command_name}' an already existing Relic repository.");
+                return;
             }
-            None => {
-                unimplemented!("Relic Error, command not defined.");
-            }
-        }
-    } else {
-        // let this run only for
-        // clone, init
-        if vec!["clone", "init"].contains(&command_name) {
-            match commands.get(command_name) {
+            _ => match commands.get(command_name) {
                 Some(command) => {
-                    command(&mut State::empty(), sub_matches);
+                    command(&mut s, sub_matches);
                 }
                 None => {
                     unimplemented!("Relic Error, command not defined.");
                 }
+            },
+        }
+    } else {
+        match command_name {
+            "clone" | "init" => {
+                // let this run only for
+                // clone, init
+                match commands.get(command_name) {
+                    Some(command) => {
+                        command(&mut State::empty(), sub_matches);
+                    }
+                    None => {
+                        unimplemented!("Relic Error, command not defined.");
+                    }
+                }
             }
-        } else {
-            println!("No Relic repository found in current directory. Consider executing 'relic init' or 'relic clone'.");
-            return;
+            _ => {
+                println!("No Relic repository found in current directory. Consider executing 'relic init' or 'relic clone'.");
+                return;
+            }
         }
     }
 }
