@@ -9,6 +9,13 @@ exclude = [
     ".relic_ignore",
     "target/"
 ]
+license = "MIT"
+keywords = ["vcs"]
+categories = ["command-line-interface", "filesystem"]
+description = "Git, but in Rust."
+homepage = "https://github.com/ian-hon/relic"
+repository = "https://github.com/ian-hon/relic"
+readme = false
 
 [dependencies]
 sha256 = "1.5.0"
