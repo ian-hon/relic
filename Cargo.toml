@@ -1,5 +1,5 @@
 [package]
-name = "relic"
+name = "relic-vcs"
 version = "0.1.0"
 edition = "2021"
 exclude = [
