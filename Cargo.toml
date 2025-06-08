@@ -2,6 +2,13 @@
 name = "relic"
 version = "0.1.0"
 edition = "2021"
+exclude = [
+    "lorem/",
+    "ipsum",
+    ".relic",
+    ".relic_ignore",
+    "target/"
+]
 
 [dependencies]
 sha256 = "1.5.0"

@@ -75,6 +75,11 @@ pushing and pulling, are implemented."#,
         (
             state::clone,
             Command::new("clone").about("Clone a remote Relic repository in the current directory.")
+            .arg_required_else_help(true)
+            .arg(
+                arg!([URL] "URL of the remote Relic repository")
+                .required(true)
+            )
         ),
         (
             state::detach,
@@ -194,6 +199,7 @@ pushing and pulling, are implemented."#,
     if let Ok(mut s) = s {
         match command_name {
             "clone" | "init" => {
+                // "init" => {
                 // let this run only for
                 // clone, init
                 println!("Unable to '{command_name}' an already existing Relic repository.");
