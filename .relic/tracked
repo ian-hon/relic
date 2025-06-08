@@ -1,7 +1,7 @@
+Cargo.lock
+target/
 Cargo.toml
+.relic_ignore
 ipsum
 lorem/
-.relic_ignore
 src/
-target/
-Cargo.lock

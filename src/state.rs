@@ -12,10 +12,23 @@ use crate::{
     content::{Content, Directory, File},
     content_set::{self, ContentSet, IgnoreSet, TrackingSet},
     error::RelicError,
+    paths::{self, RELIC_PATH_IGNORE, RELIC_PATH_PENDING, RELIC_PATH_TRACKED, RELIC_PATH_UPSTREAM},
+    relic_info::RelicInfo,
 };
+
+const DEFAULT_INFO: &str = r#"{
+    "remote":"",
+    "branch":"main"
+}"#;
+const DEFAULT_UPSTREAM: &str = r#"{
+    "path": "",
+    "name": "",
+    "content": []
+}"#;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct State {
+    pub info: RelicInfo,
     pub current: Directory,
     pub upstream: Directory,
     pub path: PathBuf,
@@ -28,6 +41,7 @@ impl State {
         // needs to store current upstream commit
         // local commits assigned an id?
         State {
+            info: RelicInfo::empty(),
             current: Directory::new(),
             upstream: Directory::new(),
             path: PathBuf::from(""),
@@ -37,8 +51,13 @@ impl State {
     }
 
     pub fn create(path: PathBuf) -> Result<State, RelicError> {
+        let info = match RelicInfo::initialise() {
+            Ok(r) => r,
+            Err(e) => return Err(e),
+        };
+
         let ignore_set =
-            IgnoreSet::create(fs::read_to_string(".relic_ignore").unwrap_or("".to_string()));
+            IgnoreSet::create(fs::read_to_string(RELIC_PATH_IGNORE).unwrap_or("".to_string()));
 
         let current =
             match State::content_at(&path.to_string_lossy().to_string(), &path, &ignore_set)? {
@@ -46,7 +65,7 @@ impl State {
                 _ => return Err(RelicError::ConfigurationIncorrect),
             };
 
-        let upstream = match fs::read_to_string(".relic/upstream") {
+        let upstream = match fs::read_to_string(RELIC_PATH_UPSTREAM) {
             Ok(data) => match Directory::deserialise(data) {
                 Some(d) => d,
                 // TODO : implement something better for this?
@@ -55,7 +74,7 @@ impl State {
             Err(_) => return Err(RelicError::FileCantOpen),
         };
 
-        let mut track_set: ContentSet = match fs::read_to_string(".relic/tracked") {
+        let mut track_set: ContentSet = match fs::read_to_string(RELIC_PATH_TRACKED) {
             Ok(data) => TrackingSet::deserialise(data),
             Err(_) => return Err(RelicError::ConfigurationIncorrect),
         };
@@ -80,6 +99,7 @@ impl State {
             }));
 
         Ok(State {
+            info,
             current,
             upstream,
             path,
@@ -193,7 +213,7 @@ impl State {
 
         // apply changes to current
         self.upstream.apply_changes(changes);
-        let _ = fs::write(".relic/upstream", self.upstream.serialise());
+        let _ = fs::write(RELIC_PATH_UPSTREAM, self.upstream.serialise());
     }
     // #endregion
 
@@ -202,13 +222,13 @@ impl State {
         // TODO : use numbering for file name
         // who knows if two commits are created in the same nanosecond
         let _ = fs::write(
-            format!(".relic/pending/{}.diff", commit.timestamp),
+            format!("{RELIC_PATH_PENDING}/{}.diff", commit.timestamp),
             commit.serialise(),
         );
     }
 
     pub fn pending_get(&self) -> Vec<Commit> {
-        let directories = if let Ok(d) = fs::read_dir(".relic/pending") {
+        let directories = if let Ok(d) = fs::read_dir(RELIC_PATH_PENDING) {
             d
         } else {
             return vec![];
@@ -250,22 +270,15 @@ pub fn init(_: &mut State, _: &ArgMatches) {
     // update root
     // update upstream
 
-    let _ = fs::create_dir(".relic");
-    let _ = fs::create_dir(".relic/history");
-    let _ = fs::create_dir(".relic/pending");
-    let _ = fs::write(".relic/root", "");
-    let _ = fs::write(".relic/tracked", "");
-    let _ = fs::write(".relic/pending", "");
-    let _ = fs::write(
-        ".relic/upstream",
-        r#"{
-    "path": "",
-    "name": "",
-    "content": []
-}"#,
-    );
+    let _ = fs::create_dir(paths::RELIC_PATH_PARENT);
+    let _ = fs::create_dir(paths::RELIC_PATH_HISTORY);
+    let _ = fs::create_dir(paths::RELIC_PATH_PENDING);
+    let _ = fs::write(paths::RELIC_PATH_INFO, DEFAULT_INFO);
+    let _ = fs::write(paths::RELIC_PATH_ROOT, "");
+    let _ = fs::write(paths::RELIC_PATH_TRACKED, "");
+    let _ = fs::write(paths::RELIC_PATH_UPSTREAM, DEFAULT_UPSTREAM);
 
-    let _ = fs::write(".relic_ignore", content_set::DEFAULT_IGNORE);
+    let _ = fs::write(paths::RELIC_PATH_IGNORE, content_set::DEFAULT_IGNORE);
 
     println!("Empty Relic repository created.");
 }
@@ -273,8 +286,8 @@ pub fn init(_: &mut State, _: &ArgMatches) {
 pub fn clone(_: &mut State, _: &ArgMatches) {}
 
 pub fn detach(_: &mut State, _: &ArgMatches) {
-    let _ = fs::remove_dir_all(".relic");
-    let _ = fs::remove_file(".relic_ignore");
+    let _ = fs::remove_dir_all(paths::RELIC_PATH_PARENT);
+    let _ = fs::remove_file(paths::RELIC_PATH_IGNORE);
 
     println!("Relic repository successfully removed.");
 }
