@@ -10,5 +10,7 @@ pub mod branch;
 pub mod commit;
 pub mod stash;
 
+pub mod commands;
+
 pub use objects::{content_set, modifications, Content, ContentMutRef, Directory, File};
 pub use relic_info::RelicInfo;

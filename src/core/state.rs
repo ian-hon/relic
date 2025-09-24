@@ -259,6 +259,7 @@ impl State {
     // #endregion
 }
 
+// TODO: move to commands
 pub fn init(_: &mut State, _: &ArgMatches) {
     // create
     // .relic

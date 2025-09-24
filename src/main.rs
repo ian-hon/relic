@@ -7,13 +7,9 @@ mod error;
 mod utils;
 
 use clap::{arg, value_parser, ArgMatches, Command};
-use core::{
-    commit::{pending, remove},
-    state::init,
-};
+use core::state::init;
 use utils::generate_tree;
 
-use crate::core::commit::{add, cherry, commit, fetch, pull, push, rollback};
 use crate::core::content_set::TrackingSet;
 use crate::core::stash::{restore, stash};
 use crate::core::{
