@@ -6,7 +6,7 @@ use std::{
 use serde::{Deserialize, Serialize};
 use similar::{ChangeTag, TextDiff};
 
-use crate::objects::{content_set::ContentSet, modifications, Content, Directory, File};
+use crate::core::{content_set::ContentSet, modifications, Content, Directory, File};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Change {

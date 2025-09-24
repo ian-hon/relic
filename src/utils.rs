@@ -2,13 +2,13 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use chrono::{DateTime, Utc};
 
-use crate::objects::{Content, Directory};
+use crate::core::{Content, Directory};
 
 pub fn generate_tree(dir: &Directory) -> String {
-    return fetch_contents(&Content::Directory(dir.clone()));
+    return generate_subtree(&Content::Directory(dir.clone()));
 }
 
-fn fetch_contents(c: &Content) -> String {
+fn generate_subtree(c: &Content) -> String {
     let mut result = vec![];
 
     match c {
@@ -17,7 +17,7 @@ fn fetch_contents(c: &Content) -> String {
             if d.content.len() >= 1 {
                 let length = d.content.len() - 1;
                 for (index, i) in d.content.iter().enumerate() {
-                    for (inner_index, line) in fetch_contents(i).split("\n").enumerate() {
+                    for (inner_index, line) in generate_subtree(i).split("\n").enumerate() {
                         r.push(format!(
                             " {} {line}",
                             if index == length {

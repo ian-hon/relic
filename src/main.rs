@@ -1,32 +1,25 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-mod objects;
-
-mod paths;
+mod core;
 
 mod error;
-mod state;
 mod utils;
 
-mod branch;
-mod commit;
-mod relic;
-mod relic_info;
-mod stash;
-
-mod change;
-
 use clap::{arg, value_parser, ArgMatches, Command};
-use commit::{pending, remove};
-use state::init;
+use core::{
+    commit::{pending, remove},
+    state::init,
+};
 use utils::generate_tree;
 
-use crate::branch::branch;
-use crate::commit::{add, cherry, commit, fetch, pull, push, rollback};
-use crate::objects::content_set::TrackingSet;
-use crate::stash::{restore, stash};
-use crate::state::State;
+use crate::core::commit::{add, cherry, commit, fetch, pull, push, rollback};
+use crate::core::content_set::TrackingSet;
+use crate::core::stash::{restore, stash};
+use crate::core::{
+    branch,
+    state::{self, State},
+};
 
 // add
 // commit {message}
@@ -127,7 +120,7 @@ pushing and pulling, are implemented."#,
             fetch,
             Command::new("fetch").about("Check remote for new changes."),
         ),
-        (branch, Command::new("branch").about("")),
+        (branch::branch, Command::new("branch").about("")),
         (
             stash,
             Command::new("stash")

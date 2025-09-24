@@ -6,9 +6,9 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    change::Change,
-    objects::{modifications, Content, ContentMutRef, File},
+use crate::core::{
+    modifications::{self, Change},
+    Content, ContentMutRef, File,
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

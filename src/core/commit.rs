@@ -3,9 +3,11 @@ use std::{collections::HashSet, fs, path::PathBuf};
 use clap::ArgMatches;
 
 use crate::{
-    change::Change,
-    objects::content_set::{ContentSet, TrackingSet},
-    paths::RELIC_PATH_TRACKED,
+    core::{
+        content_set::{ContentSet, TrackingSet},
+        modifications::Change,
+        paths::RELIC_PATH_TRACKED,
+    },
     state::State,
     utils,
 };

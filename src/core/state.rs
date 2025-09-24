@@ -7,15 +7,16 @@ use std::{
 };
 
 use crate::{
-    change::Change,
-    commit::Commit,
-    error::RelicError,
-    objects::{
+    core::{
+        commit::Commit,
         content_set::{self, ContentSet, IgnoreSet, TrackingSet},
-        Content, Directory, File,
+        modifications::Change,
+        paths::{
+            self, RELIC_PATH_IGNORE, RELIC_PATH_PENDING, RELIC_PATH_TRACKED, RELIC_PATH_UPSTREAM,
+        },
+        Content, Directory, File, RelicInfo,
     },
-    paths::{self, RELIC_PATH_IGNORE, RELIC_PATH_PENDING, RELIC_PATH_TRACKED, RELIC_PATH_UPSTREAM},
-    relic_info::RelicInfo,
+    error::RelicError,
 };
 
 const DEFAULT_INFO: &str = r#"{
