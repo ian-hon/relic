@@ -10,11 +10,9 @@ use crate::{
     change::Change,
     commit::Commit,
     error::RelicError,
-    models::{
-        content::Content,
+    objects::{
         content_set::{self, ContentSet, IgnoreSet, TrackingSet},
-        file::File,
-        Directory,
+        Content, Directory, File,
     },
     paths::{self, RELIC_PATH_IGNORE, RELIC_PATH_PENDING, RELIC_PATH_TRACKED, RELIC_PATH_UPSTREAM},
     relic_info::RelicInfo,

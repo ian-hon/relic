@@ -1,5 +1,7 @@
-use crate::models::{file::File, Directory};
+// use crate::objects::{file::File, Directory};
 use serde::{Deserialize, Serialize};
+
+use crate::objects::data::{directory::Directory, file::File};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum Content {

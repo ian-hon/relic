@@ -6,7 +6,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::models::{content::ContentMutRef, Directory};
+use crate::objects::data::{directory::Directory, ContentMutRef};
 
 pub const DEFAULT_IGNORE: &str = r#"-- Added by Relic: Automatically ignore all git content
 .git/

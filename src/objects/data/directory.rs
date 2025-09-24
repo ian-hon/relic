@@ -8,11 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     change::Change,
-    models::{
-        content::{Content, ContentMutRef},
-        file::File,
-        modifications,
-    },
+    objects::{modifications, Content, ContentMutRef, File},
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

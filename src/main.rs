@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-mod models;
+mod objects;
 
 mod paths;
 
@@ -24,7 +24,7 @@ use utils::generate_tree;
 
 use crate::branch::branch;
 use crate::commit::{add, cherry, commit, fetch, pull, push, rollback};
-use crate::models::content_set::TrackingSet;
+use crate::objects::content_set::TrackingSet;
 use crate::stash::{restore, stash};
 use crate::state::State;
 
