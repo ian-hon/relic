@@ -2,7 +2,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use chrono::{DateTime, Utc};
 
-use crate::content::{Content, Directory};
+use crate::models::{content::Content, Directory};
 
 pub fn generate_tree(dir: &Directory) -> String {
     return fetch_contents(&Content::Directory(dir.clone()));

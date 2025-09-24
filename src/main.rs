@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+mod models;
+
 mod paths;
 
-mod content_set;
 mod error;
 mod state;
 mod utils;
@@ -15,16 +16,15 @@ mod relic_info;
 mod stash;
 
 mod change;
-mod content;
 
 use clap::{arg, value_parser, ArgMatches, Command};
 use commit::{pending, remove};
-use content_set::TrackingSet;
 use state::init;
 use utils::generate_tree;
 
 use crate::branch::branch;
 use crate::commit::{add, cherry, commit, fetch, pull, push, rollback};
+use crate::models::content_set::TrackingSet;
 use crate::stash::{restore, stash};
 use crate::state::State;
 

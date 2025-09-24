@@ -4,7 +4,7 @@ use clap::ArgMatches;
 
 use crate::{
     change::Change,
-    content_set::{ContentSet, TrackingSet},
+    models::content_set::{ContentSet, TrackingSet},
     paths::RELIC_PATH_TRACKED,
     state::State,
     utils,

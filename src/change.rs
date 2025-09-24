@@ -6,15 +6,14 @@ use std::{
 use serde::{Deserialize, Serialize};
 use similar::{ChangeTag, TextDiff};
 
-use crate::{
-    content::{Content, Directory, File},
-    content_set::ContentSet,
+use crate::models::{
+    content::Content, content_set::ContentSet, file::File, modifications, Directory,
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Change {
-    pub container_modifications: Vec<ContainerModification>,
-    pub modifications: Vec<Modification>,
+    pub container_modifications: Vec<modifications::Container>,
+    pub modifications: Vec<modifications::File>,
 }
 impl Change {
     pub fn get_hash(&self) -> String {
@@ -34,28 +33,28 @@ impl Change {
 
         for c_m in &self.container_modifications {
             result.push(match c_m {
-                ContainerModification::CreateDirectory(p, n) => {
+                modifications::Container::CreateDirectory(p, n) => {
                     format!(
                         "+ D {} {}",
                         urlencoding::encode(p).to_string(),
                         urlencoding::encode(n).to_string()
                     )
                 }
-                ContainerModification::DeleteDirectory(p, n) => {
+                modifications::Container::DeleteDirectory(p, n) => {
                     format!(
                         "- D {} {}",
                         urlencoding::encode(p).to_string(),
                         urlencoding::encode(n).to_string()
                     )
                 }
-                ContainerModification::CreateFile(p, n) => {
+                modifications::Container::CreateFile(p, n) => {
                     format!(
                         "+ F {} {}",
                         urlencoding::encode(p).to_string(),
                         urlencoding::encode(n).to_string()
                     )
                 }
-                ContainerModification::DeleteFile(p, n) => {
+                modifications::Container::DeleteFile(p, n) => {
                     format!(
                         "- F {} {}",
                         urlencoding::encode(p).to_string(),
@@ -70,8 +69,8 @@ impl Change {
         let mut map = HashMap::new();
         for modification in &self.modifications {
             let path = match modification {
-                Modification::Create(path, name, _, _) => (path.clone(), name.clone()),
-                Modification::Delete(path, name, _, _) => (path.clone(), name.clone()),
+                modifications::File::Create(path, name, _, _) => (path.clone(), name.clone()),
+                modifications::File::Delete(path, name, _, _) => (path.clone(), name.clone()),
             };
             map.entry(path).or_insert(vec![]).push(modification.clone());
         }
@@ -93,8 +92,12 @@ impl Change {
             ));
             for m in modifications {
                 result.push(match m {
-                    Modification::Create(_, _, line, content) => format!("+ {line} {content:?}"),
-                    Modification::Delete(_, _, line, content) => format!("- {line} {content:?}"),
+                    modifications::File::Create(_, _, line, content) => {
+                        format!("+ {line} {content:?}")
+                    }
+                    modifications::File::Delete(_, _, line, content) => {
+                        format!("- {line} {content:?}")
+                    }
                 })
             }
         }
@@ -135,19 +138,19 @@ impl Change {
                 result
                     .container_modifications
                     .push(match (species, container) {
-                        ("+", "D") => ContainerModification::CreateDirectory(
+                        ("+", "D") => modifications::Container::CreateDirectory(
                             urlencoding::decode(parent).unwrap().to_string(),
                             urlencoding::decode(name).unwrap().to_string(),
                         ),
-                        ("-", "D") => ContainerModification::DeleteDirectory(
+                        ("-", "D") => modifications::Container::DeleteDirectory(
                             urlencoding::decode(parent).unwrap().to_string(),
                             urlencoding::decode(name).unwrap().to_string(),
                         ),
-                        ("+", "F") => ContainerModification::CreateFile(
+                        ("+", "F") => modifications::Container::CreateFile(
                             urlencoding::decode(parent).unwrap().to_string(),
                             urlencoding::decode(name).unwrap().to_string(),
                         ),
-                        ("-", "F") => ContainerModification::DeleteFile(
+                        ("-", "F") => modifications::Container::DeleteFile(
                             urlencoding::decode(parent).unwrap().to_string(),
                             urlencoding::decode(name).unwrap().to_string(),
                         ),
@@ -186,7 +189,7 @@ impl Change {
                             "+" => {
                                 let s = unescape::unescape(&content[2..].join(" ")).unwrap();
 
-                                result.modifications.push(Modification::Create(
+                                result.modifications.push(modifications::File::Create(
                                     urlencoding::decode(p).unwrap().to_string(),
                                     urlencoding::decode(n).unwrap().to_string(),
                                     line,
@@ -195,7 +198,7 @@ impl Change {
                             }
                             "-" => {
                                 let s = unescape::unescape(&content[2..].join(" ")).unwrap();
-                                result.modifications.push(Modification::Delete(
+                                result.modifications.push(modifications::File::Delete(
                                     urlencoding::decode(p).unwrap().to_string(),
                                     urlencoding::decode(n).unwrap().to_string(),
                                     line,
@@ -228,7 +231,7 @@ impl Change {
         path: String,
         upstream_file: &File,
         current_file: &File,
-    ) -> Vec<Modification> {
+    ) -> Vec<modifications::File> {
         // https://blog.jcoglan.com/2017/02/15/the-myers-diff-algorithm-part-2/
         // for our change algorithm, we will be using myers diff algorithm
         // basically a shortest distance problem, with downwards, rightwards and diagonal directions as movement choices
@@ -252,13 +255,13 @@ impl Change {
             _ => Some(c),
         }) {
             result.push(match change.tag() {
-                ChangeTag::Delete => Modification::Delete(
+                ChangeTag::Delete => modifications::File::Delete(
                     path.clone(),
                     current_file.name.clone(),
                     change.old_index().unwrap(),
                     change.to_string().strip_suffix("\n").unwrap().to_string(),
                 ),
-                ChangeTag::Insert => Modification::Create(
+                ChangeTag::Insert => modifications::File::Create(
                     path.clone(),
                     current_file.name.clone(),
                     change.new_index().unwrap(),
@@ -326,12 +329,12 @@ impl Change {
         let mut modifications = vec![];
         for (dir_name, is_file) in deleted {
             if is_file {
-                container_modifications.push(ContainerModification::DeleteFile(
+                container_modifications.push(modifications::Container::DeleteFile(
                     path.to_string_lossy().to_string(),
                     dir_name,
                 ));
             } else {
-                container_modifications.push(ContainerModification::DeleteDirectory(
+                container_modifications.push(modifications::Container::DeleteDirectory(
                     path.to_string_lossy().to_string(),
                     dir_name.clone(),
                 ));
@@ -355,11 +358,11 @@ impl Change {
         for (dir_name, is_file) in created {
             if is_file {
                 // let p = path.join(dir_name.clone()).to_string_lossy().to_string();
-                container_modifications.push(ContainerModification::CreateFile(
+                container_modifications.push(modifications::Container::CreateFile(
                     path.to_string_lossy().to_string(),
                     dir_name.clone(),
                 ));
-                // Modification::Create here
+                // modifications::File::Create here
                 modifications.append(&mut Change::get_change(
                     path.to_string_lossy().to_string(),
                     &File::new(),
@@ -370,7 +373,7 @@ impl Change {
                 ))
             } else {
                 // let p = path.join(dir_name.clone());
-                container_modifications.push(ContainerModification::CreateDirectory(
+                container_modifications.push(modifications::Container::CreateDirectory(
                     path.to_string_lossy().to_string(),
                     dir_name.clone(),
                 ));
@@ -440,8 +443,8 @@ impl Change {
     pub fn as_map(
         &self,
     ) -> (
-        HashMap<String, HashSet<ContainerModification>>,
-        HashMap<String, HashMap<String, Vec<Modification>>>,
+        HashMap<String, HashSet<modifications::Container>>,
+        HashMap<String, HashMap<String, Vec<modifications::File>>>,
     ) {
         // c_mod_map: map<parent_directory, Vec<changes>>
         // mod_map: map<parent_directory, map<file_name, Vec<changes>>>
@@ -449,10 +452,10 @@ impl Change {
         let mut c_mod_map = HashMap::new();
         for container_modification in &self.container_modifications {
             let path = match container_modification {
-                ContainerModification::CreateDirectory(path, _)
-                | ContainerModification::DeleteDirectory(path, _)
-                | ContainerModification::CreateFile(path, _)
-                | ContainerModification::DeleteFile(path, _) => path.clone(),
+                modifications::Container::CreateDirectory(path, _)
+                | modifications::Container::DeleteDirectory(path, _)
+                | modifications::Container::CreateFile(path, _)
+                | modifications::Container::DeleteFile(path, _) => path.clone(),
             };
 
             c_mod_map
@@ -464,8 +467,8 @@ impl Change {
         let mut mod_map = HashMap::new();
         for modification in &self.modifications {
             let (parent_directory, file_name) = match modification {
-                Modification::Create(path, name, _, _) => (path.clone(), name.clone()),
-                Modification::Delete(path, name, _, _) => (path.clone(), name.clone()),
+                modifications::File::Create(path, name, _, _) => (path.clone(), name.clone()),
+                modifications::File::Delete(path, name, _, _) => (path.clone(), name.clone()),
             };
             mod_map
                 .entry(parent_directory)
@@ -485,12 +488,12 @@ impl Change {
                 .clone()
                 .into_iter()
                 .filter(|c_mod| match c_mod {
-                    ContainerModification::CreateFile(p, n)
-                    | ContainerModification::DeleteFile(p, n) => filter
+                    modifications::Container::CreateFile(p, n)
+                    | modifications::Container::DeleteFile(p, n) => filter
                         .files
                         .contains(&PathBuf::from(p).join(n).to_string_lossy().to_string()),
-                    ContainerModification::CreateDirectory(p, n)
-                    | ContainerModification::DeleteDirectory(p, n) => filter
+                    modifications::Container::CreateDirectory(p, n)
+                    | modifications::Container::DeleteDirectory(p, n) => filter
                         .directories
                         .contains(&PathBuf::from(p).join(n).to_string_lossy().to_string()),
                 })
@@ -501,7 +504,8 @@ impl Change {
                 .into_iter()
                 .filter(|m| {
                     filter.files.contains(&match m {
-                        Modification::Create(p, n, _, _) | Modification::Delete(p, n, _, _) => {
+                        modifications::File::Create(p, n, _, _)
+                        | modifications::File::Delete(p, n, _, _) => {
                             PathBuf::from(p).join(n).to_string_lossy().to_string()
                         }
                     })
@@ -523,73 +527,32 @@ impl Change {
                 .container_modifications
                 .iter()
                 .map(|c| match c {
-                    ContainerModification::CreateFile(p, n) => {
-                        ContainerModification::DeleteFile(p.to_string(), n.to_string())
+                    modifications::Container::CreateFile(p, n) => {
+                        modifications::Container::DeleteFile(p.to_string(), n.to_string())
                     }
-                    ContainerModification::CreateDirectory(p, n) => {
-                        ContainerModification::DeleteDirectory(p.to_string(), n.to_string())
+                    modifications::Container::CreateDirectory(p, n) => {
+                        modifications::Container::DeleteDirectory(p.to_string(), n.to_string())
                     }
-                    ContainerModification::DeleteFile(p, n) => {
-                        ContainerModification::CreateFile(p.to_string(), n.to_string())
+                    modifications::Container::DeleteFile(p, n) => {
+                        modifications::Container::CreateFile(p.to_string(), n.to_string())
                     }
-                    ContainerModification::DeleteDirectory(p, n) => {
-                        ContainerModification::CreateDirectory(p.to_string(), n.to_string())
+                    modifications::Container::DeleteDirectory(p, n) => {
+                        modifications::Container::CreateDirectory(p.to_string(), n.to_string())
                     }
                 })
-                .collect::<Vec<ContainerModification>>(),
+                .collect::<Vec<modifications::Container>>(),
             modifications: self
                 .modifications
                 .iter()
                 .map(|m| match m {
-                    Modification::Create(p, f, l, t) => {
-                        Modification::Delete(p.to_string(), f.to_string(), *l, t.to_string())
+                    modifications::File::Create(p, f, l, t) => {
+                        modifications::File::Delete(p.to_string(), f.to_string(), *l, t.to_string())
                     }
-                    Modification::Delete(p, f, l, t) => {
-                        Modification::Create(p.to_string(), f.to_string(), *l, t.to_string())
+                    modifications::File::Delete(p, f, l, t) => {
+                        modifications::File::Create(p.to_string(), f.to_string(), *l, t.to_string())
                     }
                 })
-                .collect::<Vec<Modification>>(),
+                .collect::<Vec<modifications::File>>(),
         }
     }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Modification {
-    // creation/deletion of lines in files
-    Create(
-        String, // parent directory
-        String, // file name
-        usize,  // line
-        String, // text
-    ),
-    Delete(
-        String, // parent directory
-        String, // file name
-        usize,  // line
-        String, // text
-    ),
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
-pub enum ContainerModification {
-    // denote that parent doesnt exist?
-
-    // creation/deletion of files & folders
-    CreateDirectory(
-        String, // parent directory
-        String, // name
-    ),
-    DeleteDirectory(
-        String, // parent directory
-        String, // name
-    ),
-
-    CreateFile(
-        String, // parent directory
-        String, // name
-    ),
-    DeleteFile(
-        String, // parent directory
-        String, // name
-    ),
 }
