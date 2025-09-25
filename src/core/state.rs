@@ -1,4 +1,3 @@
-use clap::ArgMatches;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashSet,
@@ -9,21 +8,19 @@ use std::{
 use crate::{
     core::{
         commit::Commit,
-        content_set::{self, ContentSet, IgnoreSet, TrackingSet},
+        content_set::{ContentSet, IgnoreSet, TrackingSet},
         modifications::Change,
-        paths::{
-            self, RELIC_PATH_IGNORE, RELIC_PATH_PENDING, RELIC_PATH_TRACKED, RELIC_PATH_UPSTREAM,
-        },
+        paths::{RELIC_PATH_IGNORE, RELIC_PATH_PENDING, RELIC_PATH_TRACKED, RELIC_PATH_UPSTREAM},
         Content, Directory, File, RelicInfo,
     },
     error::RelicError,
 };
 
-const DEFAULT_INFO: &str = r#"{
+pub const DEFAULT_INFO: &str = r#"{
     "remote":"",
     "branch":"main"
 }"#;
-const DEFAULT_UPSTREAM: &str = r#"{
+pub const DEFAULT_UPSTREAM: &str = r#"{
     "path": "",
     "name": "",
     "content": []
@@ -257,60 +254,4 @@ impl State {
         result
     }
     // #endregion
-}
-
-// TODO: move to commands
-pub fn init(_: &mut State, _: &ArgMatches) {
-    // create
-    // .relic
-    //      history/ (empty)
-    //      pending/ (empty)
-    //      root (empty)
-    //      tracked (empty)
-    //      upstream (empty)
-    // .relic_ignore (use default (const in content_set))
-
-    // if origin is set
-    // update root
-    // update upstream
-
-    let _ = fs::create_dir(paths::RELIC_PATH_PARENT);
-    let _ = fs::create_dir(paths::RELIC_PATH_HISTORY);
-    let _ = fs::create_dir(paths::RELIC_PATH_PENDING);
-    let _ = fs::write(paths::RELIC_PATH_INFO, DEFAULT_INFO);
-    let _ = fs::write(paths::RELIC_PATH_ROOT, "");
-    let _ = fs::write(paths::RELIC_PATH_TRACKED, "");
-    let _ = fs::write(paths::RELIC_PATH_UPSTREAM, DEFAULT_UPSTREAM);
-
-    let _ = fs::write(paths::RELIC_PATH_IGNORE, content_set::DEFAULT_IGNORE);
-
-    println!("Empty Relic repository created.");
-}
-
-pub fn clone(_: &mut State, args: &ArgMatches) {
-    if let Some(remote) = args.get_one::<String>("URL") {
-        println!("remote : {remote}");
-
-        // validate if remote is a relic repository
-        // probably need some versioning system
-
-        // let _ = fs::create_dir(paths::RELIC_PATH_PARENT);
-        // let _ = fs::create_dir(paths::RELIC_PATH_HISTORY);
-        // let _ = fs::create_dir(paths::RELIC_PATH_PENDING);
-        // let _ = fs::write(paths::RELIC_PATH_INFO, DEFAULT_INFO);
-        // let _ = fs::write(paths::RELIC_PATH_ROOT, "");
-        // let _ = fs::write(paths::RELIC_PATH_TRACKED, "");
-        // let _ = fs::write(paths::RELIC_PATH_UPSTREAM, DEFAULT_UPSTREAM);
-
-        // let _ = fs::write(paths::RELIC_PATH_IGNORE, content_set::DEFAULT_IGNORE);
-    } else {
-        println!("No remote URL provided.");
-    }
-}
-
-pub fn detach(_: &mut State, _: &ArgMatches) {
-    let _ = fs::remove_dir_all(paths::RELIC_PATH_PARENT);
-    let _ = fs::remove_file(paths::RELIC_PATH_IGNORE);
-
-    println!("Relic repository successfully removed.");
 }

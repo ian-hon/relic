@@ -1,6 +1,6 @@
 use clap::ArgMatches;
 
-use crate::state::State;
+use crate::core::State;
 
 pub fn stash(_: &mut State, _: &ArgMatches) {}
 
