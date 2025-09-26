@@ -2,7 +2,7 @@ use std::fs;
 
 use clap::ArgMatches;
 
-use crate::core::{content_set, paths, state, State};
+use crate::core::{content_set, objects::data::Upstream, paths, RelicInfo, State};
 
 pub fn init(_: &mut State, _: &ArgMatches) {
     // create
@@ -21,10 +21,10 @@ pub fn init(_: &mut State, _: &ArgMatches) {
     let _ = fs::create_dir(paths::RELIC_PATH_PARENT);
     let _ = fs::create_dir(paths::RELIC_PATH_HISTORY);
     let _ = fs::create_dir(paths::RELIC_PATH_PENDING);
-    let _ = fs::write(paths::RELIC_PATH_INFO, state::DEFAULT_INFO);
+    let _ = fs::write(paths::RELIC_PATH_INFO, RelicInfo::default().serialise());
     let _ = fs::write(paths::RELIC_PATH_ROOT, "");
     let _ = fs::write(paths::RELIC_PATH_TRACKED, "");
-    let _ = fs::write(paths::RELIC_PATH_UPSTREAM, state::DEFAULT_UPSTREAM);
+    let _ = fs::write(paths::RELIC_PATH_UPSTREAM, Upstream::empty().serialise());
 
     let _ = fs::write(paths::RELIC_PATH_IGNORE, content_set::DEFAULT_IGNORE);
 

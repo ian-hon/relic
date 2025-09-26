@@ -10,25 +10,19 @@ use crate::{
         commit::Commit,
         content_set::{ContentSet, IgnoreSet, TrackingSet},
         modifications::Change,
+        objects::data::upstream::Upstream,
         paths::{RELIC_PATH_IGNORE, RELIC_PATH_PENDING, RELIC_PATH_TRACKED, RELIC_PATH_UPSTREAM},
         Blob, Content, RelicInfo, Tree,
     },
     error::RelicError,
 };
 
-pub const DEFAULT_INFO: &str = r#"{
-    "remote":"",
-    "branch":"main"
-}"#;
-pub const DEFAULT_UPSTREAM: &str = r#"{
-    "path": "",
-    "name": "",
-    "content": []
-}"#;
+pub const DEFAULT_BRANCH: &str = "main";
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct State {
     pub info: RelicInfo,
+    // current & upstream uses a Tree with unset path & name values
     pub current: Tree,
     pub upstream: Tree,
     pub path: PathBuf,
@@ -44,7 +38,7 @@ impl State {
             info: RelicInfo::empty(),
             current: Tree::new(),
             upstream: Tree::new(),
-            path: PathBuf::from(""),
+            path: PathBuf::from("."),
             track_set: ContentSet::empty(),
             ignore_set: ContentSet::empty(),
         }
@@ -65,14 +59,11 @@ impl State {
                 _ => return Err(RelicError::ConfigurationIncorrect),
             };
 
-        let upstream = match fs::read_to_string(RELIC_PATH_UPSTREAM) {
-            Ok(data) => match Tree::deserialise(data) {
-                Some(d) => d,
-                // TODO : implement something better for this?
-                None => Tree::new(), // None => return Err(RelicError::ConfigurationIncorrect),
-            },
-            Err(_) => return Err(RelicError::FileCantOpen),
-        };
+        let upstream = match Upstream::deserialise(RELIC_PATH_UPSTREAM) {
+            Ok(u) => u,
+            Err(e) => return Err(e),
+        }
+        .tree();
 
         let mut track_set: ContentSet = match fs::read_to_string(RELIC_PATH_TRACKED) {
             Ok(data) => TrackingSet::deserialise(data),
@@ -182,17 +173,6 @@ impl State {
         }))
     }
 
-    pub fn serialise_state(self: &State) -> String {
-        serde_json::to_string(self).unwrap()
-    }
-
-    pub fn deserialise_state(s: String) -> Option<State> {
-        match serde_json::from_str(&s) {
-            Ok(s) => Some(s),
-            Err(_) => None,
-        }
-    }
-
     // #region changes
     pub fn get_changes(&self) -> Change {
         Change::get_change_all(&self.upstream, &self.current, Path::new(&self.path))
@@ -213,7 +193,10 @@ impl State {
 
         // apply changes to current
         self.upstream.apply_changes(changes);
-        let _ = fs::write(RELIC_PATH_UPSTREAM, self.upstream.serialise());
+        let _ = fs::write(
+            RELIC_PATH_UPSTREAM,
+            Upstream::from_tree(&self.upstream).serialise(),
+        );
     }
     // #endregion
 

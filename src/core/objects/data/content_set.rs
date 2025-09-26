@@ -24,10 +24,6 @@ impl ContentSet {
             files: HashSet::new(),
         }
     }
-
-    pub fn as_set(&self) -> HashSet<String> {
-        HashSet::new()
-    }
 }
 
 pub trait IgnoreSet {

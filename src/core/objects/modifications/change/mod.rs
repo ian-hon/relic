@@ -15,10 +15,6 @@ pub struct Change {
     pub blobs: Vec<modifications::Blob>,
 }
 impl Change {
-    pub fn get_hash(&self) -> String {
-        sha256::digest(self.serialise_changes())
-    }
-
     pub fn empty() -> Change {
         Change {
             trees: vec![],

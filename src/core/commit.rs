@@ -13,10 +13,6 @@ pub struct Commit {
     pub author: String,
 }
 impl Commit {
-    pub fn hash(&self) -> String {
-        sha256::digest(self.serialise())
-    }
-
     pub fn header(&self) -> String {
         // "integrated backwards compatibility" (2025-5-26 16:30) (affected : change.rs, content.rs, ...)
 

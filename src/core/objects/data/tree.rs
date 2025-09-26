@@ -21,26 +21,35 @@ pub struct Tree {
 impl Tree {
     pub fn new() -> Tree {
         Tree {
-            path: PathBuf::from(""),
+            path: PathBuf::from("."),
             name: "".to_string(),
             content: vec![],
         }
     }
 
-    pub fn get_hash(&self) -> String {
-        sha256::digest(serde_json::to_string(&self).unwrap())
-    }
+    // pub fn get_hash(&self) -> String {
+    //     sha256::digest(serde_json::to_string(&self).unwrap())
+    // }
 
-    pub fn deserialise(s: String) -> Option<Tree> {
-        match serde_json::from_str(&s) {
-            Ok(d) => Some(d),
-            _ => None,
-        }
-    }
+    // pub fn deserialise(s: String) -> Option<Tree> {
+    //     match serde_json::from_str(&s) {
+    //         Ok(d) => Some(d),
+    //         _ => None,
+    //     }
+    // }
 
-    pub fn serialise(&self) -> String {
-        serde_json::to_string_pretty(&self).unwrap()
-    }
+    // pub fn deserialise_content(s: String) -> Option<Vec<Content>> {
+    //     // used only for init
+    //     // same as deserialise, but only content, no name or path
+    //     match serde_json::from_str(&s) {
+    //         Ok(d) => Some(d),
+    //         _ => None,
+    //     }
+    // }
+
+    // pub fn serialise(&self) -> String {
+    //     serde_json::to_string_pretty(&self).unwrap()
+    // }
 
     pub fn apply_changes(&mut self, changes: Change) {
         let (c_mod_map, mod_map) = changes.as_map();
@@ -156,6 +165,7 @@ impl Tree {
         // TODO : test if 100% reliable
         let changes = changes.inverse();
         self.apply_changes(changes);
+        // TODO : update upstream?
     }
 
     pub fn traverse<F>(&mut self, root_path: PathBuf, func: &F, parent: &Tree)
