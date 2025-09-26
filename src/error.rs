@@ -2,8 +2,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum RelicError {
-    BlobCantOpen,
-    IgnoredBlob,
+    FileCantOpen,
+    IgnoredFile,
     ConfigurationIncorrect,
     RelicInfo(Box<RelicError>),
 }

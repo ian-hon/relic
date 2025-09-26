@@ -179,7 +179,6 @@ pub fn handle(command_handler: CommandHandler, args: ArgMatches, state: Result<S
     if let Ok(mut s) = state {
         match command_name {
             "clone" | "init" => {
-                // "init" => {
                 // let this run only for
                 // clone, init
                 println!("Unable to '{command_name}' an already existing Relic repository.");

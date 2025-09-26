@@ -24,7 +24,7 @@ impl Blob {
                 name: name,
                 content: content,
             }),
-            Err(_) => Err(RelicError::BlobCantOpen),
+            Err(_) => Err(RelicError::FileCantOpen),
         }
     }
 

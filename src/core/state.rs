@@ -11,7 +11,7 @@ use crate::{
         content_set::{ContentSet, IgnoreSet, TrackingSet},
         modifications::Change,
         paths::{RELIC_PATH_IGNORE, RELIC_PATH_PENDING, RELIC_PATH_TRACKED, RELIC_PATH_UPSTREAM},
-        Content, Tree, Blob, RelicInfo,
+        Blob, Content, RelicInfo, Tree,
     },
     error::RelicError,
 };
@@ -71,7 +71,7 @@ impl State {
                 // TODO : implement something better for this?
                 None => Tree::new(), // None => return Err(RelicError::ConfigurationIncorrect),
             },
-            Err(_) => return Err(RelicError::BlobCantOpen),
+            Err(_) => return Err(RelicError::FileCantOpen),
         };
 
         let mut track_set: ContentSet = match fs::read_to_string(RELIC_PATH_TRACKED) {
@@ -119,7 +119,7 @@ impl State {
             Ok(r) => r,
             Err(e) => {
                 println!("state.rs (content_at) get all dirs : {root_path:?} : {e:?}");
-                return Err(RelicError::BlobCantOpen);
+                return Err(RelicError::FileCantOpen);
             }
         };
 

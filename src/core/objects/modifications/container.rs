@@ -24,6 +24,15 @@ pub enum Tree {
     ),
 }
 impl Tree {
+    pub fn extract_data(&self) -> (String, String) {
+        match self {
+            Tree::CreateTree(path, name)
+            | Tree::DeleteTree(path, name)
+            | Tree::CreateBlob(path, name)
+            | Tree::DeleteBlob(path, name) => (path.clone(), name.clone()),
+        }
+    }
+
     pub fn serialise(&self) -> String {
         format!(
             "{} {}",
