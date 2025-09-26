@@ -144,31 +144,34 @@ impl Change {
                     };
 
                     match &previous_blob {
-                        Some((p, n)) => match species {
-                            // TODO: combine
-                            "+" => {
-                                let s = unescape::unescape(&content[2..].join(" ")).unwrap();
+                        Some((p, n)) => {
+                            let decoded_path = urlencoding::decode(p).unwrap().to_string();
+                            let decoded_name = urlencoding::decode(n).unwrap().to_string();
+                            let s = unescape::unescape(&content[2..].join(" ")).unwrap();
+                            let content_text = s[1..s.len() - 1].to_string();
 
-                                result.blobs.push(modifications::Blob::Create(
-                                    urlencoding::decode(p).unwrap().to_string(),
-                                    urlencoding::decode(n).unwrap().to_string(),
-                                    line,
-                                    s[1..s.len() - 1].to_string(),
-                                ));
+                            match species {
+                                "+" => {
+                                    result.blobs.push(modifications::Blob::Create(
+                                        decoded_path,
+                                        decoded_name,
+                                        line,
+                                        content_text,
+                                    ));
+                                }
+                                "-" => {
+                                    result.blobs.push(modifications::Blob::Delete(
+                                        decoded_path,
+                                        decoded_name,
+                                        line,
+                                        content_text,
+                                    ));
+                                }
+                                _ => {
+                                    return None;
+                                }
                             }
-                            "-" => {
-                                let s = unescape::unescape(&content[2..].join(" ")).unwrap();
-                                result.blobs.push(modifications::Blob::Delete(
-                                    urlencoding::decode(p).unwrap().to_string(),
-                                    urlencoding::decode(n).unwrap().to_string(),
-                                    line,
-                                    s[1..s.len() - 1].to_string(),
-                                ))
-                            }
-                            _ => {
-                                return None;
-                            }
-                        },
+                        }
                         None => {
                             return None;
                         }
