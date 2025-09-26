@@ -10,8 +10,8 @@ use crate::core::{content_set::ContentSet, modifications, Content, Directory, Fi
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Change {
-    pub container_modifications: Vec<modifications::Container>,
-    pub modifications: Vec<modifications::File>,
+    pub container: Vec<modifications::Container>,
+    pub file: Vec<modifications::File>,
 }
 impl Change {
     pub fn get_hash(&self) -> String {
@@ -27,76 +27,39 @@ impl Change {
         // + 0 "use std::{collections::{HashMap, HashSet}, fs, path::{Path, PathBuf}, sync::{Arc, Mutex}};"
         // + 1 ""
 
+        // final result string
         let mut result: Vec<String> = vec![];
 
-        for c_m in &self.container_modifications {
-            result.push(match c_m {
-                modifications::Container::CreateDirectory(p, n) => {
-                    format!(
-                        "+ D {} {}",
-                        urlencoding::encode(p).to_string(),
-                        urlencoding::encode(n).to_string()
-                    )
-                }
-                modifications::Container::DeleteDirectory(p, n) => {
-                    format!(
-                        "- D {} {}",
-                        urlencoding::encode(p).to_string(),
-                        urlencoding::encode(n).to_string()
-                    )
-                }
-                modifications::Container::CreateFile(p, n) => {
-                    format!(
-                        "+ F {} {}",
-                        urlencoding::encode(p).to_string(),
-                        urlencoding::encode(n).to_string()
-                    )
-                }
-                modifications::Container::DeleteFile(p, n) => {
-                    format!(
-                        "- F {} {}",
-                        urlencoding::encode(p).to_string(),
-                        urlencoding::encode(n).to_string()
-                    )
-                }
-            });
+        for container in &self.container {
+            result.push(container.serialise());
         }
 
-        result.push("=".to_string());
+        result.push("=".to_string()); // container and file section separator
 
-        let mut map = HashMap::new();
-        for modification in &self.modifications {
-            let path = match modification {
-                modifications::File::Create(path, name, _, _) => (path.clone(), name.clone()),
-                modifications::File::Delete(path, name, _, _) => (path.clone(), name.clone()),
-            };
-            map.entry(path).or_insert(vec![]).push(modification.clone());
+        let mut file_sections = HashMap::new();
+        for file in &self.file {
+            file_sections
+                .entry(file.extract_path())
+                .or_insert(vec![])
+                .push(file.clone());
         }
 
-        let mut keys = map
+        let mut keys = file_sections
             .iter()
             .map(|x| x.0.clone())
             .collect::<Vec<(String, String)>>();
 
-        // map.sort_by_key(|x| x.0.clone());
         keys.sort();
 
         for (path, name) in keys {
-            let modifications = map.get(&(path.clone(), name.clone())).unwrap();
+            let modifications = file_sections.get(&(path.clone(), name.clone())).unwrap();
             result.push(format!(
                 "| {} {}",
                 urlencoding::encode(&path).to_string(),
                 urlencoding::encode(&name).to_string()
             ));
             for m in modifications {
-                result.push(match m {
-                    modifications::File::Create(_, _, line, content) => {
-                        format!("+ {line} {content:?}")
-                    }
-                    modifications::File::Delete(_, _, line, content) => {
-                        format!("- {line} {content:?}")
-                    }
-                })
+                result.push(m.extract_change());
             }
         }
 
@@ -133,30 +96,28 @@ impl Change {
                     return None;
                 };
 
-                result
-                    .container_modifications
-                    .push(match (species, container) {
-                        ("+", "D") => modifications::Container::CreateDirectory(
-                            urlencoding::decode(parent).unwrap().to_string(),
-                            urlencoding::decode(name).unwrap().to_string(),
-                        ),
-                        ("-", "D") => modifications::Container::DeleteDirectory(
-                            urlencoding::decode(parent).unwrap().to_string(),
-                            urlencoding::decode(name).unwrap().to_string(),
-                        ),
-                        ("+", "F") => modifications::Container::CreateFile(
-                            urlencoding::decode(parent).unwrap().to_string(),
-                            urlencoding::decode(name).unwrap().to_string(),
-                        ),
-                        ("-", "F") => modifications::Container::DeleteFile(
-                            urlencoding::decode(parent).unwrap().to_string(),
-                            urlencoding::decode(name).unwrap().to_string(),
-                        ),
-                        _ => {
-                            println!("invalid c_mod");
-                            return None;
-                        }
-                    });
+                result.container.push(match (species, container) {
+                    ("+", "D") => modifications::Container::CreateDirectory(
+                        urlencoding::decode(parent).unwrap().to_string(),
+                        urlencoding::decode(name).unwrap().to_string(),
+                    ),
+                    ("-", "D") => modifications::Container::DeleteDirectory(
+                        urlencoding::decode(parent).unwrap().to_string(),
+                        urlencoding::decode(name).unwrap().to_string(),
+                    ),
+                    ("+", "F") => modifications::Container::CreateFile(
+                        urlencoding::decode(parent).unwrap().to_string(),
+                        urlencoding::decode(name).unwrap().to_string(),
+                    ),
+                    ("-", "F") => modifications::Container::DeleteFile(
+                        urlencoding::decode(parent).unwrap().to_string(),
+                        urlencoding::decode(name).unwrap().to_string(),
+                    ),
+                    _ => {
+                        println!("invalid c_mod");
+                        return None;
+                    }
+                });
             } else {
                 if content[0] == "|" {
                     // | .%2Fsrc content.rs
@@ -187,7 +148,7 @@ impl Change {
                             "+" => {
                                 let s = unescape::unescape(&content[2..].join(" ")).unwrap();
 
-                                result.modifications.push(modifications::File::Create(
+                                result.file.push(modifications::File::Create(
                                     urlencoding::decode(p).unwrap().to_string(),
                                     urlencoding::decode(n).unwrap().to_string(),
                                     line,
@@ -196,7 +157,7 @@ impl Change {
                             }
                             "-" => {
                                 let s = unescape::unescape(&content[2..].join(" ")).unwrap();
-                                result.modifications.push(modifications::File::Delete(
+                                result.file.push(modifications::File::Delete(
                                     urlencoding::decode(p).unwrap().to_string(),
                                     urlencoding::decode(n).unwrap().to_string(),
                                     line,
@@ -220,8 +181,8 @@ impl Change {
 
     pub fn empty() -> Change {
         Change {
-            container_modifications: vec![],
-            modifications: vec![],
+            container: vec![],
+            file: vec![],
         }
     }
 
@@ -345,8 +306,8 @@ impl Change {
                     &Directory::new(),
                     &path.join(dir_name.clone()),
                 );
-                container_modifications.append(&mut changes.container_modifications);
-                modifications.append(&mut changes.modifications);
+                container_modifications.append(&mut changes.container);
+                modifications.append(&mut changes.file);
             }
         }
         //
@@ -384,8 +345,8 @@ impl Change {
                     },
                     &path.join(dir_name.clone()),
                 );
-                container_modifications.append(&mut changes.container_modifications);
-                modifications.append(&mut changes.modifications);
+                container_modifications.append(&mut changes.container);
+                modifications.append(&mut changes.file);
             }
         }
 
@@ -409,8 +370,8 @@ impl Change {
                     //
 
                     let mut changes = Change::get_change_all(upstream_directory, directory, &p);
-                    container_modifications.append(&mut changes.container_modifications);
-                    modifications.append(&mut changes.modifications);
+                    container_modifications.append(&mut changes.container);
+                    modifications.append(&mut changes.file);
                 }
                 Content::File(f) => {
                     let upstream_file = match upstream_map.get(&(f.name.clone(), true)) {
@@ -433,8 +394,8 @@ impl Change {
         }
 
         Change {
-            container_modifications,
-            modifications,
+            container: container_modifications,
+            file: modifications,
         }
     }
 
@@ -448,7 +409,7 @@ impl Change {
         // mod_map: map<parent_directory, map<file_name, Vec<changes>>>
 
         let mut c_mod_map = HashMap::new();
-        for container_modification in &self.container_modifications {
+        for container_modification in &self.container {
             let path = match container_modification {
                 modifications::Container::CreateDirectory(path, _)
                 | modifications::Container::DeleteDirectory(path, _)
@@ -463,7 +424,7 @@ impl Change {
         }
 
         let mut mod_map = HashMap::new();
-        for modification in &self.modifications {
+        for modification in &self.file {
             let (parent_directory, file_name) = match modification {
                 modifications::File::Create(path, name, _, _) => (path.clone(), name.clone()),
                 modifications::File::Delete(path, name, _, _) => (path.clone(), name.clone()),
@@ -481,8 +442,8 @@ impl Change {
 
     pub fn filter_changes(&self, filter: &ContentSet) -> Change {
         Change {
-            container_modifications: self
-                .container_modifications
+            container: self
+                .container
                 .clone()
                 .into_iter()
                 .filter(|c_mod| match c_mod {
@@ -496,8 +457,8 @@ impl Change {
                         .contains(&PathBuf::from(p).join(n).to_string_lossy().to_string()),
                 })
                 .collect(),
-            modifications: self
-                .modifications
+            file: self
+                .file
                 .clone()
                 .into_iter()
                 .filter(|m| {
@@ -521,8 +482,8 @@ impl Change {
         // but relic will always apply changes in the correct order regardless
 
         Change {
-            container_modifications: self
-                .container_modifications
+            container: self
+                .container
                 .iter()
                 .map(|c| match c {
                     modifications::Container::CreateFile(p, n) => {
@@ -539,8 +500,8 @@ impl Change {
                     }
                 })
                 .collect::<Vec<modifications::Container>>(),
-            modifications: self
-                .modifications
+            file: self
+                .file
                 .iter()
                 .map(|m| match m {
                     modifications::File::Create(p, f, l, t) => {

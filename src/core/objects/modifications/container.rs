@@ -23,3 +23,36 @@ pub enum Container {
         String, // name
     ),
 }
+impl Container {
+    pub fn serialise(&self) -> String {
+        format!(
+            "{} {}",
+            match self {
+                Container::CreateDirectory(_, _) => {
+                    "+ D"
+                }
+                Container::DeleteDirectory(_, _) => {
+                    "- D"
+                }
+                Container::CreateFile(_, _) => {
+                    "+ F"
+                }
+                Container::DeleteFile(_, _) => {
+                    "- F"
+                }
+            },
+            match self {
+                Container::CreateDirectory(p, n)
+                | Container::DeleteDirectory(p, n)
+                | Container::CreateFile(p, n)
+                | Container::DeleteFile(p, n) => {
+                    format!(
+                        "{} {}",
+                        urlencoding::encode(&p).to_string(),
+                        urlencoding::encode(&n).to_string()
+                    )
+                }
+            }
+        )
+    }
+}
