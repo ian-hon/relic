@@ -61,7 +61,7 @@ impl State {
 
         let current =
             match State::content_at(&path.to_string_lossy().to_string(), &path, &ignore_set)? {
-                Content::Directory(d) => d,
+                Content::Tree(t) => t,
                 _ => return Err(RelicError::ConfigurationIncorrect),
             };
 
@@ -71,7 +71,7 @@ impl State {
                 // TODO : implement something better for this?
                 None => Tree::new(), // None => return Err(RelicError::ConfigurationIncorrect),
             },
-            Err(_) => return Err(RelicError::FileCantOpen),
+            Err(_) => return Err(RelicError::BlobCantOpen),
         };
 
         let mut track_set: ContentSet = match fs::read_to_string(RELIC_PATH_TRACKED) {
@@ -119,11 +119,11 @@ impl State {
             Ok(r) => r,
             Err(e) => {
                 println!("state.rs (content_at) get all dirs : {root_path:?} : {e:?}");
-                return Err(RelicError::FileCantOpen);
+                return Err(RelicError::BlobCantOpen);
             }
         };
 
-        let mut directory_contents = vec![];
+        let mut tree_contents = vec![];
 
         // iterate through them all
         for path in paths {
@@ -144,7 +144,7 @@ impl State {
 
                         match State::content_at(&file_name, &file_path, ignore_set) {
                             Ok(c) => {
-                                directory_contents.push(c);
+                                tree_contents.push(c);
                             }
                             Err(e) => {
                                 println!("state.rs (content_at) subtraverse : {e:?}");
@@ -156,8 +156,8 @@ impl State {
                         }
 
                         match Blob::create(file_name, file_path) {
-                            Ok(f) => {
-                                directory_contents.push(Content::Blob(f));
+                            Ok(b) => {
+                                tree_contents.push(Content::Blob(b));
                             }
                             _ => {}
                         }
@@ -175,10 +175,10 @@ impl State {
         }
 
         // println!("CREATION : {root_path:?}");
-        Ok(Content::Directory(Tree {
+        Ok(Content::Tree(Tree {
             path: root_path.clone(),
             name: file_name.clone(),
-            content: directory_contents,
+            content: tree_contents,
         }))
     }
 
@@ -219,7 +219,7 @@ impl State {
 
     // #region pending
     pub fn pending_add(&self, commit: Commit) {
-        // TODO : use numbering for file name
+        // TODO : use numbering for blob name
         // who knows if two commits are created in the same nanosecond
         let _ = fs::write(
             format!("{RELIC_PATH_PENDING}/{}.diff", commit.timestamp),

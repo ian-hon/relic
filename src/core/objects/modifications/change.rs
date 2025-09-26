@@ -34,7 +34,7 @@ impl Change {
             result.push(tree.serialise());
         }
 
-        result.push("=".to_string()); // container and file section separator
+        result.push("=".to_string()); // container and blob section separator
 
         let mut blob_sections = HashMap::new();
         for blob in &self.blobs {
@@ -122,7 +122,7 @@ impl Change {
                 if content[0] == "|" {
                     // | .%2Fsrc content.rs
                     let [_, parent, name] = *content.as_slice() else {
-                        println!("invalid file header");
+                        println!("invalid blob header");
                         return None;
                     };
 
@@ -192,8 +192,8 @@ impl Change {
 
     pub fn get_change(
         path: String,
-        upstream_file: &Blob,
-        current_file: &Blob,
+        upstream_blob: &Blob,
+        current_blob: &Blob,
     ) -> Vec<modifications::Blob> {
         // https://blog.jcoglan.com/2017/02/15/the-myers-diff-algorithm-part-2/
         // for our change algorithm, we will be using myers diff algorithm
@@ -202,10 +202,10 @@ impl Change {
 
         // similar does not handle newlines at eof well at all
         // this is the workaround for it
-        let upstream = format!("{}\n", upstream_file.content.clone());
-        let current = format!("{}\n", current_file.content.clone());
+        let upstream = format!("{}\n", upstream_blob.content.clone());
+        let current = format!("{}\n", current_blob.content.clone());
 
-        // TODO : compare hashes instead of files
+        // TODO : compare hashes instead of blobs
         if upstream == current {
             return vec![];
         }
@@ -220,13 +220,13 @@ impl Change {
             result.push(match change.tag() {
                 ChangeTag::Delete => modifications::Blob::Delete(
                     path.clone(),
-                    current_file.name.clone(),
+                    current_blob.name.clone(),
                     change.old_index().unwrap(),
                     change.to_string().strip_suffix("\n").unwrap().to_string(),
                 ),
                 ChangeTag::Insert => modifications::Blob::Create(
                     path.clone(),
-                    current_file.name.clone(),
+                    current_blob.name.clone(),
                     change.new_index().unwrap(),
                     change.to_string().strip_suffix("\n").unwrap().to_string(),
                 ),
@@ -238,7 +238,7 @@ impl Change {
     }
 
     pub fn get_change_all(upstream: &Tree, current: &Tree, path: &Path) -> Change {
-        // assume that both current and previous have the same directory names
+        // assume that both current and previous have the same tree names
         // has to be bfs
 
         // initialise current state set
@@ -246,13 +246,13 @@ impl Change {
         let mut current_map = HashMap::new();
         for c in &current.content {
             match c {
-                Content::Directory(d) => {
-                    current_set.insert((d.name.clone(), false));
-                    current_map.insert((d.name.clone(), false), c);
+                Content::Tree(t) => {
+                    current_set.insert((t.name.clone(), false));
+                    current_map.insert((t.name.clone(), false), c);
                 }
-                Content::Blob(f) => {
-                    current_set.insert((f.name.clone(), true));
-                    current_map.insert((f.name.clone(), true), c);
+                Content::Blob(b) => {
+                    current_set.insert((b.name.clone(), true));
+                    current_map.insert((b.name.clone(), true), c);
                 }
             }
         }
@@ -263,19 +263,19 @@ impl Change {
         let mut upstream_map = HashMap::new();
         for c in &upstream.content {
             match c {
-                Content::Directory(d) => {
-                    upstream_set.insert((d.name.clone(), false));
-                    upstream_map.insert((d.name.clone(), false), c);
+                Content::Tree(t) => {
+                    upstream_set.insert((t.name.clone(), false));
+                    upstream_map.insert((t.name.clone(), false), c);
                 }
-                Content::Blob(f) => {
-                    upstream_set.insert((f.name.clone(), true));
-                    upstream_map.insert((f.name.clone(), true), c);
+                Content::Blob(b) => {
+                    upstream_set.insert((b.name.clone(), true));
+                    upstream_map.insert((b.name.clone(), true), c);
                 }
             }
         }
         //
 
-        // use set differences to determine file and directory creation or deletion
+        // use set differences to determine blob and tree creation or deletion
         let deleted = upstream_set
             .difference(&current_set)
             .map(|(n, t)| (n.to_string(), *t))
@@ -286,29 +286,29 @@ impl Change {
             .collect::<Vec<(String, bool)>>();
         //
 
-        // for all deleted files, log them
-        // for all deleted directories, log them and do the same for all children
+        // for all deleted blobs, log them
+        // for all deleted trees, log them and do the same for all children
         let mut container_modifications = vec![];
         let mut modifications = vec![];
-        for (dir_name, is_file) in deleted {
-            if is_file {
+        for (name, is_blob) in deleted {
+            if is_blob {
                 container_modifications.push(modifications::Tree::DeleteBlob(
                     path.to_string_lossy().to_string(),
-                    dir_name,
+                    name,
                 ));
             } else {
                 container_modifications.push(modifications::Tree::DeleteTree(
                     path.to_string_lossy().to_string(),
-                    dir_name.clone(),
+                    name.clone(),
                 ));
                 // traverse all children, add them to result as well
                 let mut changes = Change::get_change_all(
-                    match upstream_map.get(&(dir_name.clone(), false)).unwrap() {
-                        Content::Directory(deleted_d) => deleted_d,
+                    match upstream_map.get(&(name.clone(), false)).unwrap() {
+                        Content::Tree(deleted_tree) => deleted_tree,
                         _ => panic!(),
                     },
                     &Tree::new(),
-                    &path.join(dir_name.clone()),
+                    &path.join(name.clone()),
                 );
                 container_modifications.append(&mut changes.trees);
                 modifications.append(&mut changes.blobs);
@@ -316,38 +316,38 @@ impl Change {
         }
         //
 
-        // for all created files, log them
-        // for all created directories, log them and do the same for all children
-        for (dir_name, is_file) in created {
-            if is_file {
-                // let p = path.join(dir_name.clone()).to_string_lossy().to_string();
+        // for all created blobs, log them
+        // for all created trees, log them and do the same for all children
+        for (name, is_blob) in created {
+            if is_blob {
+                // let p = path.join(name.clone()).to_string_lossy().to_string();
                 container_modifications.push(modifications::Tree::CreateBlob(
                     path.to_string_lossy().to_string(),
-                    dir_name.clone(),
+                    name.clone(),
                 ));
-                // modifications::File::Create here
+                // modifications::Blob::Create here
                 modifications.append(&mut Change::get_change(
                     path.to_string_lossy().to_string(),
                     &Blob::new(),
-                    match current_map.get(&(dir_name, true)).unwrap() {
-                        Content::Blob(f) => f,
+                    match current_map.get(&(name, true)).unwrap() {
+                        Content::Blob(b) => b,
                         _ => panic!(),
                     },
                 ))
             } else {
-                // let p = path.join(dir_name.clone());
+                // let p = path.join(name.clone());
                 container_modifications.push(modifications::Tree::CreateTree(
                     path.to_string_lossy().to_string(),
-                    dir_name.clone(),
+                    name.clone(),
                 ));
 
                 let mut changes = Change::get_change_all(
                     &Tree::new(),
-                    match current_map.get(&(dir_name.clone(), false)).unwrap() {
-                        Content::Directory(d) => d,
+                    match current_map.get(&(name.clone(), false)).unwrap() {
+                        Content::Tree(t) => t,
                         _ => panic!(),
                     },
-                    &path.join(dir_name.clone()),
+                    &path.join(name.clone()),
                 );
                 container_modifications.append(&mut changes.trees);
                 modifications.append(&mut changes.blobs);
@@ -356,31 +356,30 @@ impl Change {
 
         for content in &current.content {
             match content {
-                Content::Directory(directory) => {
-                    // get the matching upstream directory
+                Content::Tree(tree) => {
+                    // get the matching upstream tree
                     // if it doesnt exist, that means the content is new and can be ignored
                     // we ignore it because we have already logged it in the section above
-                    let p = path.join(directory.name.clone());
-                    let upstream_directory =
-                        match upstream_map.get(&(directory.name.clone(), false)) {
-                            Some(u) => match u {
-                                Content::Directory(u_d) => u_d,
-                                _ => panic!(),
-                            },
-                            _ => {
-                                continue;
-                            }
-                        };
+                    let p = path.join(tree.name.clone());
+                    let upstream_tree = match upstream_map.get(&(tree.name.clone(), false)) {
+                        Some(u) => match u {
+                            Content::Tree(u_t) => u_t,
+                            _ => panic!(),
+                        },
+                        _ => {
+                            continue;
+                        }
+                    };
                     //
 
-                    let mut changes = Change::get_change_all(upstream_directory, directory, &p);
+                    let mut changes = Change::get_change_all(upstream_tree, tree, &p);
                     container_modifications.append(&mut changes.trees);
                     modifications.append(&mut changes.blobs);
                 }
-                Content::Blob(f) => {
-                    let upstream_file = match upstream_map.get(&(f.name.clone(), true)) {
+                Content::Blob(b) => {
+                    let upstream_blob = match upstream_map.get(&(b.name.clone(), true)) {
                         Some(c) => match c {
-                            Content::Blob(f) => f,
+                            Content::Blob(b) => b,
                             _ => panic!(),
                         },
                         None => {
@@ -390,8 +389,8 @@ impl Change {
 
                     modifications.append(&mut Change::get_change(
                         path.to_string_lossy().to_string(),
-                        &upstream_file,
-                        &f,
+                        &upstream_blob,
+                        &b,
                     ));
                 }
             }

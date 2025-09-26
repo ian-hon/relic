@@ -4,12 +4,12 @@ use crate::core::{Blob, Tree};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum Content {
-    Directory(Tree),
+    Tree(Tree),
     Blob(Blob),
 }
 
 #[derive(Debug)]
 pub enum ContentMutRef<'a> {
-    Directory(&'a mut Tree),
+    Tree(&'a mut Tree),
     Blob(&'a mut Blob),
 }

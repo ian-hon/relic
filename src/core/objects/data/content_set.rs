@@ -106,16 +106,16 @@ impl TrackingSet for ContentSet {
                 let mut tracked_unlock = tracked_mutex.lock().unwrap();
 
                 match current {
-                    ContentMutRef::Directory(d) => {
+                    ContentMutRef::Tree(t) => {
                         // if parent in set
                         // add to content set
                         if tracked_unlock
                             .directories
-                            .contains(&d.path.parent().unwrap().to_string_lossy().to_string())
+                            .contains(&t.path.parent().unwrap().to_string_lossy().to_string())
                         {
                             tracked_unlock
                                 .directories
-                                .insert(d.path.to_string_lossy().to_string());
+                                .insert(t.path.to_string_lossy().to_string());
                         }
                     }
                     ContentMutRef::Blob(b) => {

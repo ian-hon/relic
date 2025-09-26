@@ -26,6 +26,6 @@ impl RelicInfo {
                 RelicError::ConfigurationIncorrect,
             )));
         }
-        Err(RelicError::RelicInfo(Box::new(RelicError::FileCantOpen)))
+        Err(RelicError::RelicInfo(Box::new(RelicError::BlobCantOpen)))
     }
 }

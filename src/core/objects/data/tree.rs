@@ -52,20 +52,20 @@ impl Tree {
         self.traverse(
             PathBuf::from("."),
             &|_, _, current| {
-                if let ContentMutRef::Directory(d) = current {
+                if let ContentMutRef::Tree(t) = current {
                     // somehow denote that the parent does not yet exist,
-                    // possibly recursively create directories where needed
+                    // possibly recursively create trees where needed
 
                     // TODO : optimise the match arms
                     let mut c_mod_map_lock = c_mod_map.lock().unwrap();
                     if let Some(c_modifications) =
-                        c_mod_map_lock.get(&d.path.to_string_lossy().to_string())
+                        c_mod_map_lock.get(&t.path.to_string_lossy().to_string())
                     {
                         let c_clone = c_modifications.clone();
 
                         // deals with additions
-                        d.content.append(&mut recursive_birth(
-                            &PathBuf::from(d.path.clone()),
+                        t.content.append(&mut recursive_birth(
+                            &PathBuf::from(t.path.clone()),
                             &mut c_mod_map_lock,
                         ));
 
@@ -83,13 +83,13 @@ impl Tree {
                             }
                         }
 
-                        d.content = d
+                        t.content = t
                             .content
                             .iter()
                             .filter(|x| {
                                 !deleted_containers.contains(match x {
-                                    Content::Blob(f) => &f.name,
-                                    Content::Directory(d) => &d.name,
+                                    Content::Blob(b) => &b.name,
+                                    Content::Tree(t) => &t.name,
                                 })
                             })
                             .map(|x| x.clone())
@@ -131,7 +131,7 @@ impl Tree {
                 for c_mod in c_clone {
                     match c_mod {
                         modifications::Tree::CreateTree(_, n) => {
-                            result.push(Content::Directory(Tree {
+                            result.push(Content::Tree(Tree {
                                 path: parent_directory.join(n.clone()),
                                 name: n.clone(),
                                 content: recursive_birth(
@@ -160,19 +160,19 @@ impl Tree {
 
     pub fn traverse<F>(&mut self, root_path: PathBuf, func: &F, parent: &Tree)
     where
-        // parent path, parent directory, current content
+        // parent path, parent tree, current content
         F: Fn(&PathBuf, &Tree, ContentMutRef),
     {
-        func(&root_path, &parent, ContentMutRef::Directory(self));
+        func(&root_path, &parent, ContentMutRef::Tree(self));
 
         let c = self.clone();
         for content in &mut self.content {
             match content {
-                Content::Directory(d) => {
-                    d.traverse(root_path.join(d.name.clone()), func, &c);
+                Content::Tree(t) => {
+                    t.traverse(root_path.join(t.name.clone()), func, &c);
                 }
-                Content::Blob(f) => {
-                    func(&root_path, &c, ContentMutRef::Blob(f));
+                Content::Blob(b) => {
+                    func(&root_path, &c, ContentMutRef::Blob(b));
                 }
             }
         }

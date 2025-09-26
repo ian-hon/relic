@@ -4,19 +4,19 @@ use chrono::{DateTime, Utc};
 
 use crate::core::{Content, Tree};
 
-pub fn generate_tree(dir: &Tree) -> String {
-    return generate_subtree(&Content::Directory(dir.clone()));
+pub fn generate_tree(tree: &Tree) -> String {
+    return generate_subtree(&Content::Tree(tree.clone()));
 }
 
 fn generate_subtree(c: &Content) -> String {
     let mut result = vec![];
 
     match c {
-        Content::Directory(d) => {
-            let mut r = vec![d.name.clone()];
-            if d.content.len() >= 1 {
-                let length = d.content.len() - 1;
-                for (index, i) in d.content.iter().enumerate() {
+        Content::Tree(t) => {
+            let mut r = vec![t.name.clone()];
+            if t.content.len() >= 1 {
+                let length = t.content.len() - 1;
+                for (index, i) in t.content.iter().enumerate() {
                     for (inner_index, line) in generate_subtree(i).split("\n").enumerate() {
                         r.push(format!(
                             " {} {line}",
@@ -39,9 +39,9 @@ fn generate_subtree(c: &Content) -> String {
             }
             result.push(r.join("\n"));
         }
-        Content::Blob(f) => {
-            result.push(f.name.clone());
-            // result.push(format!("{} ({})", f.name, sha256::digest(&f.content)));
+        Content::Blob(b) => {
+            result.push(b.name.clone());
+            // result.push(format!("{} ({})", b.name, sha256::digest(&b.content)));
         }
     }
 
