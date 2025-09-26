@@ -1,51 +1,51 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Container {
+pub enum Tree {
     // denote that parent doesnt exist?
 
     // creation/deletion of files & folders
-    CreateDirectory(
+    CreateTree(
         String, // parent directory
         String, // name
     ),
-    DeleteDirectory(
+    DeleteTree(
         String, // parent directory
         String, // name
     ),
 
-    CreateFile(
+    CreateBlob(
         String, // parent directory
         String, // name
     ),
-    DeleteFile(
+    DeleteBlob(
         String, // parent directory
         String, // name
     ),
 }
-impl Container {
+impl Tree {
     pub fn serialise(&self) -> String {
         format!(
             "{} {}",
             match self {
-                Container::CreateDirectory(_, _) => {
+                Tree::CreateTree(_, _) => {
                     "+ D"
                 }
-                Container::DeleteDirectory(_, _) => {
+                Tree::DeleteTree(_, _) => {
                     "- D"
                 }
-                Container::CreateFile(_, _) => {
+                Tree::CreateBlob(_, _) => {
                     "+ F"
                 }
-                Container::DeleteFile(_, _) => {
+                Tree::DeleteBlob(_, _) => {
                     "- F"
                 }
             },
             match self {
-                Container::CreateDirectory(p, n)
-                | Container::DeleteDirectory(p, n)
-                | Container::CreateFile(p, n)
-                | Container::DeleteFile(p, n) => {
+                Tree::CreateTree(p, n)
+                | Tree::DeleteTree(p, n)
+                | Tree::CreateBlob(p, n)
+                | Tree::DeleteBlob(p, n) => {
                     format!(
                         "{} {}",
                         urlencoding::encode(&p).to_string(),

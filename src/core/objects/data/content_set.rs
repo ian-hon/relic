@@ -6,7 +6,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::core::{ContentMutRef, Directory};
+use crate::core::{ContentMutRef, Tree};
 
 pub const DEFAULT_IGNORE: &str = r#"-- Added by Relic: Automatically ignore all git content
 .git/
@@ -73,7 +73,7 @@ impl IgnoreSet for ContentSet {
 
 pub trait TrackingSet {
     fn deserialise(content: String) -> Self;
-    fn initialise(&self, d: &mut Directory) -> Self;
+    fn initialise(&self, d: &mut Tree) -> Self;
 }
 impl TrackingSet for ContentSet {
     fn deserialise(content: String) -> Self {
@@ -96,7 +96,7 @@ impl TrackingSet for ContentSet {
         result
     }
 
-    fn initialise(&self, d: &mut Directory) -> ContentSet {
+    fn initialise(&self, d: &mut Tree) -> ContentSet {
         let tracked_mutex = Arc::new(Mutex::new(self.clone()));
         d.traverse(
             PathBuf::from("."),
@@ -118,14 +118,14 @@ impl TrackingSet for ContentSet {
                                 .insert(d.path.to_string_lossy().to_string());
                         }
                     }
-                    ContentMutRef::File(f) => {
+                    ContentMutRef::Blob(b) => {
                         if tracked_unlock
                             .directories
                             .contains(&path.to_string_lossy().to_string())
                         {
                             tracked_unlock
                                 .files
-                                .insert(path.join(&f.name).to_string_lossy().to_string());
+                                .insert(path.join(&b.name).to_string_lossy().to_string());
                         }
                     }
                 }

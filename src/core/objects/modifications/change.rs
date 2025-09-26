@@ -6,12 +6,12 @@ use std::{
 use serde::{Deserialize, Serialize};
 use similar::{ChangeTag, TextDiff};
 
-use crate::core::{content_set::ContentSet, modifications, Content, Directory, File};
+use crate::core::{content_set::ContentSet, modifications, Blob, Content, Tree};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Change {
-    pub container: Vec<modifications::Container>,
-    pub file: Vec<modifications::File>,
+    pub trees: Vec<modifications::Tree>,
+    pub blobs: Vec<modifications::Blob>,
 }
 impl Change {
     pub fn get_hash(&self) -> String {
@@ -30,21 +30,21 @@ impl Change {
         // final result string
         let mut result: Vec<String> = vec![];
 
-        for container in &self.container {
-            result.push(container.serialise());
+        for tree in &self.trees {
+            result.push(tree.serialise());
         }
 
         result.push("=".to_string()); // container and file section separator
 
-        let mut file_sections = HashMap::new();
-        for file in &self.file {
-            file_sections
-                .entry(file.extract_path())
+        let mut blob_sections = HashMap::new();
+        for blob in &self.blobs {
+            blob_sections
+                .entry(blob.extract_path())
                 .or_insert(vec![])
-                .push(file.clone());
+                .push(blob.clone());
         }
 
-        let mut keys = file_sections
+        let mut keys = blob_sections
             .iter()
             .map(|x| x.0.clone())
             .collect::<Vec<(String, String)>>();
@@ -52,14 +52,14 @@ impl Change {
         keys.sort();
 
         for (path, name) in keys {
-            let modifications = file_sections.get(&(path.clone(), name.clone())).unwrap();
+            let modifications = blob_sections.get(&(path.clone(), name.clone())).unwrap();
             result.push(format!(
                 "| {} {}",
                 urlencoding::encode(&path).to_string(),
                 urlencoding::encode(&name).to_string()
             ));
-            for m in modifications {
-                result.push(m.extract_change());
+            for blob in modifications {
+                result.push(blob.extract_change());
             }
         }
 
@@ -81,40 +81,40 @@ impl Change {
             .collect::<Vec<String>>();
 
         let mut result = Change::empty();
-        let mut container_section = true;
+        let mut tree_section = true;
 
-        let mut previous_file = None;
+        let mut previous_blob = None;
         for l in lines {
-            if container_section && (l == "=") {
-                container_section = false;
+            if tree_section && (l == "=") {
+                tree_section = false;
                 continue;
             }
             let content = l.split(" ").collect::<Vec<&str>>();
 
-            if container_section {
+            if tree_section {
                 let [species, container, parent, name] = *content.as_slice() else {
                     return None;
                 };
 
-                result.container.push(match (species, container) {
-                    ("+", "D") => modifications::Container::CreateDirectory(
+                result.trees.push(match (species, container) {
+                    ("+", "D") => modifications::Tree::CreateTree(
                         urlencoding::decode(parent).unwrap().to_string(),
                         urlencoding::decode(name).unwrap().to_string(),
                     ),
-                    ("-", "D") => modifications::Container::DeleteDirectory(
+                    ("-", "D") => modifications::Tree::DeleteTree(
                         urlencoding::decode(parent).unwrap().to_string(),
                         urlencoding::decode(name).unwrap().to_string(),
                     ),
-                    ("+", "F") => modifications::Container::CreateFile(
+                    ("+", "F") => modifications::Tree::CreateBlob(
                         urlencoding::decode(parent).unwrap().to_string(),
                         urlencoding::decode(name).unwrap().to_string(),
                     ),
-                    ("-", "F") => modifications::Container::DeleteFile(
+                    ("-", "F") => modifications::Tree::DeleteBlob(
                         urlencoding::decode(parent).unwrap().to_string(),
                         urlencoding::decode(name).unwrap().to_string(),
                     ),
                     _ => {
-                        println!("invalid c_mod");
+                        println!("invalid tree");
                         return None;
                     }
                 });
@@ -126,7 +126,7 @@ impl Change {
                         return None;
                     };
 
-                    previous_file = Some((parent.to_string(), name.to_string()));
+                    previous_blob = Some((parent.to_string(), name.to_string()));
                 } else {
                     // + 0 "use std::{collections::{HashMap, HashSet}, fs, path::{Path, PathBuf}, sync::{Arc, Mutex}};"
                     if content.len() < 2 {
@@ -143,12 +143,13 @@ impl Change {
                         }
                     };
 
-                    match &previous_file {
+                    match &previous_blob {
                         Some((p, n)) => match species {
+                            // TODO: combine
                             "+" => {
                                 let s = unescape::unescape(&content[2..].join(" ")).unwrap();
 
-                                result.file.push(modifications::File::Create(
+                                result.blobs.push(modifications::Blob::Create(
                                     urlencoding::decode(p).unwrap().to_string(),
                                     urlencoding::decode(n).unwrap().to_string(),
                                     line,
@@ -157,7 +158,7 @@ impl Change {
                             }
                             "-" => {
                                 let s = unescape::unescape(&content[2..].join(" ")).unwrap();
-                                result.file.push(modifications::File::Delete(
+                                result.blobs.push(modifications::Blob::Delete(
                                     urlencoding::decode(p).unwrap().to_string(),
                                     urlencoding::decode(n).unwrap().to_string(),
                                     line,
@@ -181,16 +182,16 @@ impl Change {
 
     pub fn empty() -> Change {
         Change {
-            container: vec![],
-            file: vec![],
+            trees: vec![],
+            blobs: vec![],
         }
     }
 
     pub fn get_change(
         path: String,
-        upstream_file: &File,
-        current_file: &File,
-    ) -> Vec<modifications::File> {
+        upstream_file: &Blob,
+        current_file: &Blob,
+    ) -> Vec<modifications::Blob> {
         // https://blog.jcoglan.com/2017/02/15/the-myers-diff-algorithm-part-2/
         // for our change algorithm, we will be using myers diff algorithm
         // basically a shortest distance problem, with downwards, rightwards and diagonal directions as movement choices
@@ -214,13 +215,13 @@ impl Change {
             _ => Some(c),
         }) {
             result.push(match change.tag() {
-                ChangeTag::Delete => modifications::File::Delete(
+                ChangeTag::Delete => modifications::Blob::Delete(
                     path.clone(),
                     current_file.name.clone(),
                     change.old_index().unwrap(),
                     change.to_string().strip_suffix("\n").unwrap().to_string(),
                 ),
-                ChangeTag::Insert => modifications::File::Create(
+                ChangeTag::Insert => modifications::Blob::Create(
                     path.clone(),
                     current_file.name.clone(),
                     change.new_index().unwrap(),
@@ -233,7 +234,7 @@ impl Change {
         result
     }
 
-    pub fn get_change_all(upstream: &Directory, current: &Directory, path: &Path) -> Change {
+    pub fn get_change_all(upstream: &Tree, current: &Tree, path: &Path) -> Change {
         // assume that both current and previous have the same directory names
         // has to be bfs
 
@@ -246,7 +247,7 @@ impl Change {
                     current_set.insert((d.name.clone(), false));
                     current_map.insert((d.name.clone(), false), c);
                 }
-                Content::File(f) => {
+                Content::Blob(f) => {
                     current_set.insert((f.name.clone(), true));
                     current_map.insert((f.name.clone(), true), c);
                 }
@@ -263,7 +264,7 @@ impl Change {
                     upstream_set.insert((d.name.clone(), false));
                     upstream_map.insert((d.name.clone(), false), c);
                 }
-                Content::File(f) => {
+                Content::Blob(f) => {
                     upstream_set.insert((f.name.clone(), true));
                     upstream_map.insert((f.name.clone(), true), c);
                 }
@@ -288,12 +289,12 @@ impl Change {
         let mut modifications = vec![];
         for (dir_name, is_file) in deleted {
             if is_file {
-                container_modifications.push(modifications::Container::DeleteFile(
+                container_modifications.push(modifications::Tree::DeleteBlob(
                     path.to_string_lossy().to_string(),
                     dir_name,
                 ));
             } else {
-                container_modifications.push(modifications::Container::DeleteDirectory(
+                container_modifications.push(modifications::Tree::DeleteTree(
                     path.to_string_lossy().to_string(),
                     dir_name.clone(),
                 ));
@@ -303,11 +304,11 @@ impl Change {
                         Content::Directory(deleted_d) => deleted_d,
                         _ => panic!(),
                     },
-                    &Directory::new(),
+                    &Tree::new(),
                     &path.join(dir_name.clone()),
                 );
-                container_modifications.append(&mut changes.container);
-                modifications.append(&mut changes.file);
+                container_modifications.append(&mut changes.trees);
+                modifications.append(&mut changes.blobs);
             }
         }
         //
@@ -317,36 +318,36 @@ impl Change {
         for (dir_name, is_file) in created {
             if is_file {
                 // let p = path.join(dir_name.clone()).to_string_lossy().to_string();
-                container_modifications.push(modifications::Container::CreateFile(
+                container_modifications.push(modifications::Tree::CreateBlob(
                     path.to_string_lossy().to_string(),
                     dir_name.clone(),
                 ));
                 // modifications::File::Create here
                 modifications.append(&mut Change::get_change(
                     path.to_string_lossy().to_string(),
-                    &File::new(),
+                    &Blob::new(),
                     match current_map.get(&(dir_name, true)).unwrap() {
-                        Content::File(f) => f,
+                        Content::Blob(f) => f,
                         _ => panic!(),
                     },
                 ))
             } else {
                 // let p = path.join(dir_name.clone());
-                container_modifications.push(modifications::Container::CreateDirectory(
+                container_modifications.push(modifications::Tree::CreateTree(
                     path.to_string_lossy().to_string(),
                     dir_name.clone(),
                 ));
 
                 let mut changes = Change::get_change_all(
-                    &Directory::new(),
+                    &Tree::new(),
                     match current_map.get(&(dir_name.clone(), false)).unwrap() {
                         Content::Directory(d) => d,
                         _ => panic!(),
                     },
                     &path.join(dir_name.clone()),
                 );
-                container_modifications.append(&mut changes.container);
-                modifications.append(&mut changes.file);
+                container_modifications.append(&mut changes.trees);
+                modifications.append(&mut changes.blobs);
             }
         }
 
@@ -370,13 +371,13 @@ impl Change {
                     //
 
                     let mut changes = Change::get_change_all(upstream_directory, directory, &p);
-                    container_modifications.append(&mut changes.container);
-                    modifications.append(&mut changes.file);
+                    container_modifications.append(&mut changes.trees);
+                    modifications.append(&mut changes.blobs);
                 }
-                Content::File(f) => {
+                Content::Blob(f) => {
                     let upstream_file = match upstream_map.get(&(f.name.clone(), true)) {
                         Some(c) => match c {
-                            Content::File(f) => f,
+                            Content::Blob(f) => f,
                             _ => panic!(),
                         },
                         None => {
@@ -394,27 +395,27 @@ impl Change {
         }
 
         Change {
-            container: container_modifications,
-            file: modifications,
+            trees: container_modifications,
+            blobs: modifications,
         }
     }
 
     pub fn as_map(
         &self,
     ) -> (
-        HashMap<String, HashSet<modifications::Container>>,
-        HashMap<String, HashMap<String, Vec<modifications::File>>>,
+        HashMap<String, HashSet<modifications::Tree>>,
+        HashMap<String, HashMap<String, Vec<modifications::Blob>>>,
     ) {
         // c_mod_map: map<parent_directory, Vec<changes>>
         // mod_map: map<parent_directory, map<file_name, Vec<changes>>>
 
         let mut c_mod_map = HashMap::new();
-        for container_modification in &self.container {
+        for container_modification in &self.trees {
             let path = match container_modification {
-                modifications::Container::CreateDirectory(path, _)
-                | modifications::Container::DeleteDirectory(path, _)
-                | modifications::Container::CreateFile(path, _)
-                | modifications::Container::DeleteFile(path, _) => path.clone(),
+                modifications::Tree::CreateTree(path, _)
+                | modifications::Tree::DeleteTree(path, _)
+                | modifications::Tree::CreateBlob(path, _)
+                | modifications::Tree::DeleteBlob(path, _) => path.clone(),
             };
 
             c_mod_map
@@ -424,10 +425,10 @@ impl Change {
         }
 
         let mut mod_map = HashMap::new();
-        for modification in &self.file {
+        for modification in &self.blobs {
             let (parent_directory, file_name) = match modification {
-                modifications::File::Create(path, name, _, _) => (path.clone(), name.clone()),
-                modifications::File::Delete(path, name, _, _) => (path.clone(), name.clone()),
+                modifications::Blob::Create(path, name, _, _) => (path.clone(), name.clone()),
+                modifications::Blob::Delete(path, name, _, _) => (path.clone(), name.clone()),
             };
             mod_map
                 .entry(parent_directory)
@@ -442,29 +443,29 @@ impl Change {
 
     pub fn filter_changes(&self, filter: &ContentSet) -> Change {
         Change {
-            container: self
-                .container
+            trees: self
+                .trees
                 .clone()
                 .into_iter()
                 .filter(|c_mod| match c_mod {
-                    modifications::Container::CreateFile(p, n)
-                    | modifications::Container::DeleteFile(p, n) => filter
+                    modifications::Tree::CreateBlob(p, n)
+                    | modifications::Tree::DeleteBlob(p, n) => filter
                         .files
                         .contains(&PathBuf::from(p).join(n).to_string_lossy().to_string()),
-                    modifications::Container::CreateDirectory(p, n)
-                    | modifications::Container::DeleteDirectory(p, n) => filter
+                    modifications::Tree::CreateTree(p, n)
+                    | modifications::Tree::DeleteTree(p, n) => filter
                         .directories
                         .contains(&PathBuf::from(p).join(n).to_string_lossy().to_string()),
                 })
                 .collect(),
-            file: self
-                .file
+            blobs: self
+                .blobs
                 .clone()
                 .into_iter()
                 .filter(|m| {
                     filter.files.contains(&match m {
-                        modifications::File::Create(p, n, _, _)
-                        | modifications::File::Delete(p, n, _, _) => {
+                        modifications::Blob::Create(p, n, _, _)
+                        | modifications::Blob::Delete(p, n, _, _) => {
                             PathBuf::from(p).join(n).to_string_lossy().to_string()
                         }
                     })
@@ -482,36 +483,36 @@ impl Change {
         // but relic will always apply changes in the correct order regardless
 
         Change {
-            container: self
-                .container
+            trees: self
+                .trees
                 .iter()
                 .map(|c| match c {
-                    modifications::Container::CreateFile(p, n) => {
-                        modifications::Container::DeleteFile(p.to_string(), n.to_string())
+                    modifications::Tree::CreateBlob(p, n) => {
+                        modifications::Tree::DeleteBlob(p.to_string(), n.to_string())
                     }
-                    modifications::Container::CreateDirectory(p, n) => {
-                        modifications::Container::DeleteDirectory(p.to_string(), n.to_string())
+                    modifications::Tree::CreateTree(p, n) => {
+                        modifications::Tree::DeleteTree(p.to_string(), n.to_string())
                     }
-                    modifications::Container::DeleteFile(p, n) => {
-                        modifications::Container::CreateFile(p.to_string(), n.to_string())
+                    modifications::Tree::DeleteBlob(p, n) => {
+                        modifications::Tree::CreateBlob(p.to_string(), n.to_string())
                     }
-                    modifications::Container::DeleteDirectory(p, n) => {
-                        modifications::Container::CreateDirectory(p.to_string(), n.to_string())
+                    modifications::Tree::DeleteTree(p, n) => {
+                        modifications::Tree::CreateTree(p.to_string(), n.to_string())
                     }
                 })
-                .collect::<Vec<modifications::Container>>(),
-            file: self
-                .file
+                .collect::<Vec<modifications::Tree>>(),
+            blobs: self
+                .blobs
                 .iter()
                 .map(|m| match m {
-                    modifications::File::Create(p, f, l, t) => {
-                        modifications::File::Delete(p.to_string(), f.to_string(), *l, t.to_string())
+                    modifications::Blob::Create(p, f, l, t) => {
+                        modifications::Blob::Delete(p.to_string(), f.to_string(), *l, t.to_string())
                     }
-                    modifications::File::Delete(p, f, l, t) => {
-                        modifications::File::Create(p.to_string(), f.to_string(), *l, t.to_string())
+                    modifications::Blob::Delete(p, f, l, t) => {
+                        modifications::Blob::Create(p.to_string(), f.to_string(), *l, t.to_string())
                     }
                 })
-                .collect::<Vec<modifications::File>>(),
+                .collect::<Vec<modifications::Blob>>(),
         }
     }
 }

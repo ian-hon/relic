@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
-pub enum File {
+pub enum Blob {
     // creation/deletion of lines in files
     Create(
         String, // parent directory
@@ -17,10 +17,10 @@ pub enum File {
     ),
 }
 
-impl File {
+impl Blob {
     pub fn extract_path(&self) -> (String, String) {
         match self {
-            File::Create(path, name, _, _) | File::Delete(path, name, _, _) => {
+            Blob::Create(path, name, _, _) | Blob::Delete(path, name, _, _) => {
                 (path.clone(), name.clone())
             }
         }
@@ -30,11 +30,11 @@ impl File {
         format!(
             "{} {}",
             match self {
-                File::Create(_, _, _, _) => "+",
-                File::Delete(_, _, _, _) => "-",
+                Blob::Create(_, _, _, _) => "+",
+                Blob::Delete(_, _, _, _) => "-",
             },
             match self {
-                File::Create(_, _, line, content) | File::Delete(_, _, line, content) => {
+                Blob::Create(_, _, line, content) | Blob::Delete(_, _, line, content) => {
                     format!("{line} {content:?}")
                 }
             }

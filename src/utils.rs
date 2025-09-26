@@ -2,9 +2,9 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use chrono::{DateTime, Utc};
 
-use crate::core::{Content, Directory};
+use crate::core::{Content, Tree};
 
-pub fn generate_tree(dir: &Directory) -> String {
+pub fn generate_tree(dir: &Tree) -> String {
     return generate_subtree(&Content::Directory(dir.clone()));
 }
 
@@ -39,7 +39,7 @@ fn generate_subtree(c: &Content) -> String {
             }
             result.push(r.join("\n"));
         }
-        Content::File(f) => {
+        Content::Blob(f) => {
             result.push(f.name.clone());
             // result.push(format!("{} ({})", f.name, sha256::digest(&f.content)));
         }

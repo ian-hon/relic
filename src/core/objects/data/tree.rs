@@ -8,19 +8,19 @@ use serde::{Deserialize, Serialize};
 
 use crate::core::{
     modifications::{self, Change},
-    Content, ContentMutRef, File,
+    Blob, Content, ContentMutRef,
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Directory {
+pub struct Tree {
     pub path: PathBuf,
     pub name: String,
     pub content: Vec<Content>,
 }
 
-impl Directory {
-    pub fn new() -> Directory {
-        Directory {
+impl Tree {
+    pub fn new() -> Tree {
+        Tree {
             path: PathBuf::from(""),
             name: "".to_string(),
             content: vec![],
@@ -31,7 +31,7 @@ impl Directory {
         sha256::digest(serde_json::to_string(&self).unwrap())
     }
 
-    pub fn deserialise(s: String) -> Option<Directory> {
+    pub fn deserialise(s: String) -> Option<Tree> {
         match serde_json::from_str(&s) {
             Ok(d) => Some(d),
             _ => None,
@@ -73,10 +73,10 @@ impl Directory {
                         // deals with subtractions
                         for c_mod in &c_clone {
                             match c_mod {
-                                modifications::Container::DeleteDirectory(_, n) => {
+                                modifications::Tree::DeleteTree(_, n) => {
                                     deleted_containers.insert(n);
                                 }
-                                modifications::Container::DeleteFile(_, n) => {
+                                modifications::Tree::DeleteBlob(_, n) => {
                                     deleted_containers.insert(n);
                                 }
                                 _ => {}
@@ -88,7 +88,7 @@ impl Directory {
                             .iter()
                             .filter(|x| {
                                 !deleted_containers.contains(match x {
-                                    Content::File(f) => &f.name,
+                                    Content::Blob(f) => &f.name,
                                     Content::Directory(d) => &d.name,
                                 })
                             })
@@ -97,13 +97,13 @@ impl Directory {
                     }
                 }
             },
-            &Directory::new(),
+            &Tree::new(),
         );
 
         self.traverse(
             PathBuf::from("."),
             &|path, _, current| {
-                if let ContentMutRef::File(f) = current {
+                if let ContentMutRef::Blob(f) = current {
                     if let Some(modifications) = mod_map
                         .get(&path.to_string_lossy().to_string())
                         .map_or(None, |x| x.get(&f.name))
@@ -117,7 +117,7 @@ impl Directory {
 
         pub fn recursive_birth(
             parent_directory: &PathBuf,
-            c_mod_map: &mut HashMap<String, HashSet<modifications::Container>>,
+            c_mod_map: &mut HashMap<String, HashSet<modifications::Tree>>,
         ) -> Vec<Content> {
             // pass the new directory's parent directory
             let mut result = vec![];
@@ -130,8 +130,8 @@ impl Directory {
                 }
                 for c_mod in c_clone {
                     match c_mod {
-                        modifications::Container::CreateDirectory(_, n) => {
-                            result.push(Content::Directory(Directory {
+                        modifications::Tree::CreateTree(_, n) => {
+                            result.push(Content::Directory(Tree {
                                 path: parent_directory.join(n.clone()),
                                 name: n.clone(),
                                 content: recursive_birth(
@@ -140,12 +140,10 @@ impl Directory {
                                 ),
                             }));
                         }
-                        modifications::Container::CreateFile(_, n) => {
-                            result.push(Content::File(File {
-                                name: n.clone(),
-                                content: "".to_string(),
-                            }))
-                        }
+                        modifications::Tree::CreateBlob(_, n) => result.push(Content::Blob(Blob {
+                            name: n.clone(),
+                            content: "".to_string(),
+                        })),
                         _ => {}
                     }
                 }
@@ -160,10 +158,10 @@ impl Directory {
         self.apply_changes(changes);
     }
 
-    pub fn traverse<F>(&mut self, root_path: PathBuf, func: &F, parent: &Directory)
+    pub fn traverse<F>(&mut self, root_path: PathBuf, func: &F, parent: &Tree)
     where
         // parent path, parent directory, current content
-        F: Fn(&PathBuf, &Directory, ContentMutRef),
+        F: Fn(&PathBuf, &Tree, ContentMutRef),
     {
         func(&root_path, &parent, ContentMutRef::Directory(self));
 
@@ -173,8 +171,8 @@ impl Directory {
                 Content::Directory(d) => {
                     d.traverse(root_path.join(d.name.clone()), func, &c);
                 }
-                Content::File(f) => {
-                    func(&root_path, &c, ContentMutRef::File(f));
+                Content::Blob(f) => {
+                    func(&root_path, &c, ContentMutRef::Blob(f));
                 }
             }
         }

@@ -5,33 +5,30 @@ use serde::{Deserialize, Serialize};
 use crate::{core::modifications, error::RelicError};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct File {
+pub struct Blob {
     pub name: String,
     pub content: String,
 }
 
-impl File {
-    pub fn new() -> File {
-        File {
+impl Blob {
+    pub fn new() -> Blob {
+        Blob {
             name: "".to_string(),
             content: "".to_string(),
         }
     }
 
-    pub fn create(name: String, path: PathBuf) -> Result<File, RelicError> {
+    pub fn create(name: String, path: PathBuf) -> Result<Blob, RelicError> {
         match fs::read_to_string(path) {
-            Ok(content) => Ok(File {
+            Ok(content) => Ok(Blob {
                 name: name,
                 content: content,
             }),
-            Err(_) => {
-                // println!("Error creating file : {e}");
-                Err(RelicError::FileCantOpen)
-            }
+            Err(_) => Err(RelicError::FileCantOpen),
         }
     }
 
-    pub fn apply_changes(&mut self, modifications: &Vec<modifications::File>) {
+    pub fn apply_changes(&mut self, modifications: &Vec<modifications::Blob>) {
         // TODO : investigate whether an additional newline is added to eof
         // BUG : when the file has only one line, diffs start to break
         //
@@ -59,17 +56,17 @@ impl File {
 
         let mut modifications = modifications.clone();
         modifications.sort_by_key(|m| match m {
-            modifications::File::Create(_, _, l, _) => *l as i128,
-            modifications::File::Delete(_, _, l, _) => -(*l as i128),
+            modifications::Blob::Create(_, _, l, _) => *l as i128,
+            modifications::Blob::Delete(_, _, l, _) => -(*l as i128),
         });
 
         for m in &modifications {
             match m {
-                modifications::File::Create(_, _, line, content) => {
+                modifications::Blob::Create(_, _, line, content) => {
                     // insert at that line
                     lines.insert(*line, content.clone());
                 }
-                modifications::File::Delete(_, _, line, _) => {
+                modifications::Blob::Delete(_, _, line, _) => {
                     // delete that line
                     lines.remove(*line);
                 }

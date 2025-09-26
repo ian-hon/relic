@@ -1,16 +1,15 @@
-// use crate::objects::{file::File, Directory};
 use serde::{Deserialize, Serialize};
 
-use crate::core::{Directory, File};
+use crate::core::{Blob, Tree};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum Content {
-    Directory(Directory),
-    File(File),
+    Directory(Tree),
+    Blob(Blob),
 }
 
 #[derive(Debug)]
 pub enum ContentMutRef<'a> {
-    Directory(&'a mut Directory),
-    File(&'a mut File),
+    Directory(&'a mut Tree),
+    Blob(&'a mut Blob),
 }

@@ -11,7 +11,7 @@ use crate::{
         content_set::{ContentSet, IgnoreSet, TrackingSet},
         modifications::Change,
         paths::{RELIC_PATH_IGNORE, RELIC_PATH_PENDING, RELIC_PATH_TRACKED, RELIC_PATH_UPSTREAM},
-        Content, Directory, File, RelicInfo,
+        Content, Tree, Blob, RelicInfo,
     },
     error::RelicError,
 };
@@ -29,8 +29,8 @@ pub const DEFAULT_UPSTREAM: &str = r#"{
 #[derive(Debug, Serialize, Deserialize)]
 pub struct State {
     pub info: RelicInfo,
-    pub current: Directory,
-    pub upstream: Directory,
+    pub current: Tree,
+    pub upstream: Tree,
     pub path: PathBuf,
     pub track_set: ContentSet,
     pub ignore_set: ContentSet,
@@ -42,8 +42,8 @@ impl State {
         // local commits assigned an id?
         State {
             info: RelicInfo::empty(),
-            current: Directory::new(),
-            upstream: Directory::new(),
+            current: Tree::new(),
+            upstream: Tree::new(),
             path: PathBuf::from(""),
             track_set: ContentSet::empty(),
             ignore_set: ContentSet::empty(),
@@ -66,10 +66,10 @@ impl State {
             };
 
         let upstream = match fs::read_to_string(RELIC_PATH_UPSTREAM) {
-            Ok(data) => match Directory::deserialise(data) {
+            Ok(data) => match Tree::deserialise(data) {
                 Some(d) => d,
                 // TODO : implement something better for this?
-                None => Directory::new(), // None => return Err(RelicError::ConfigurationIncorrect),
+                None => Tree::new(), // None => return Err(RelicError::ConfigurationIncorrect),
             },
             Err(_) => return Err(RelicError::FileCantOpen),
         };
@@ -155,9 +155,9 @@ impl State {
                             continue;
                         }
 
-                        match File::create(file_name, file_path) {
+                        match Blob::create(file_name, file_path) {
                             Ok(f) => {
-                                directory_contents.push(Content::File(f));
+                                directory_contents.push(Content::Blob(f));
                             }
                             _ => {}
                         }
@@ -175,7 +175,7 @@ impl State {
         }
 
         // println!("CREATION : {root_path:?}");
-        Ok(Content::Directory(Directory {
+        Ok(Content::Directory(Tree {
             path: root_path.clone(),
             name: file_name.clone(),
             content: directory_contents,
