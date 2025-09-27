@@ -39,6 +39,7 @@ impl Change {
     pub fn as_human_readable(&self, current_upstream: &Tree) -> String {
         // HashMap<String, HashSet<modifications::Tree>>,
         // HashMap<String, HashMap<String, Vec<modifications::Blob>>>,
+
         let mut changes = self.clone();
         changes.trees = changes
             .trees
@@ -107,8 +108,7 @@ impl Change {
 
         format!(
             "{}\n\n{}\n\n{affected_files} files affected, {} additions, {} deletions",
-            "",
-            // self.serialise_changes(),
+            self.serialise_changes(),
             utils::generate_blame_tree(&current_upstream, &tree_map, &blob_map),
             addition,
             deletion
