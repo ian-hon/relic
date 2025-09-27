@@ -1,0 +1,26 @@
+= LOCAL 1758966133648 "" "" no_one
++ F . pluto
++ F . mars
++ F . .relic_ignore
++ D . ipsum
++ F .%2Fipsum saturn
++ F .%2Fipsum temp
++ D .%2Fipsum dolor
++ F .%2Fipsum%2Fdolor hm
++ F .%2Fipsum%2Fdolor pluto
++ F . earth
+=
+| . .relic_ignore
+- 0 ""
++ 0 "-- Added by Relic: Automatically ignore all git content"
++ 1 ".git/"
++ 2 ".gitignore"
+| . earth
+- 0 ""
++ 0 "can you understand me?"
+| . mars
+- 0 ""
++ 0 "sldfjsljdkf"
+| .%2Fipsum temp
+- 0 ""
++ 0 "alsfdk"

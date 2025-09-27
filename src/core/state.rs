@@ -192,7 +192,7 @@ impl State {
         let changes = self.get_changes().filter_changes(&tracked_content);
 
         // apply changes to current
-        self.upstream.apply_changes(changes);
+        self.upstream.apply_changes(&changes);
         let _ = fs::write(
             RELIC_PATH_UPSTREAM,
             Upstream::from_tree(&self.upstream).serialise(),

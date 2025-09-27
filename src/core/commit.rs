@@ -16,12 +16,7 @@ impl Commit {
     pub fn header(&self) -> String {
         // "integrated backwards compatibility" (2025-5-26 16:30) (affected : change.rs, content.rs, ...)
 
-        let mut file_names = vec![];
-        for (_, parent) in self.change.as_map().1 {
-            for (f, _) in parent {
-                file_names.push(f);
-            }
-        }
+        let file_names = self.change.get_affected_blobs();
 
         format!(
             "({}) \"{}\" (affected : {}{})",

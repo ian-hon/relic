@@ -18,6 +18,7 @@ pub fn pending(state: &mut State, args: &ArgMatches) {
             return;
         }
 
+        // if want the blamed tree here, need to refer to previous upstream
         println!("{}", pending[commit_number as usize].serialise());
     } else {
         // display all

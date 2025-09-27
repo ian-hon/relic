@@ -7,6 +7,6 @@ pub fn staging(s: &mut State, _: &ArgMatches) {
         "{}",
         s.get_changes()
             .filter_changes(&s.track_set.initialise(&mut s.current))
-            .serialise_changes()
+            .as_human_readable(&s.upstream)
     );
 }

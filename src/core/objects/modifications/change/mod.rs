@@ -3,11 +3,17 @@ mod filter;
 mod inverse;
 mod serialisation;
 
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    thread::current,
+};
 
 use serde::{Deserialize, Serialize};
 
-use crate::core::modifications;
+use crate::{
+    core::{content_set::ContentSet, modifications, State, Tree},
+    utils,
+};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Change {
@@ -20,6 +26,93 @@ impl Change {
             trees: vec![],
             blobs: vec![],
         }
+    }
+
+    pub fn get_affected_blobs(&self) -> Vec<String> {
+        let mut blobs = vec![];
+        for (_, parent) in self.as_map().1 {
+            blobs.append(&mut parent.iter().map(|f| f.0.to_string()).collect())
+        }
+        blobs
+    }
+
+    pub fn as_human_readable(&self, current_upstream: &Tree) -> String {
+        // HashMap<String, HashSet<modifications::Tree>>,
+        // HashMap<String, HashMap<String, Vec<modifications::Blob>>>,
+        let mut changes = self.clone();
+        changes.trees = changes
+            .trees
+            .clone()
+            .into_iter()
+            .filter(|t| match t {
+                modifications::Tree::DeleteBlob(_, _) | modifications::Tree::DeleteTree(_, _) => {
+                    false
+                }
+                _ => true,
+            })
+            .collect::<Vec<modifications::Tree>>();
+
+        let (tree_map, blob_map) = self.as_map();
+
+        let mut current_upstream = current_upstream.clone();
+        current_upstream.apply_changes(&changes);
+
+        /*
+            {full change}
+
+            repo_name
+             ├ (+) saturn
+             ├ (-) jupiter
+             └ huh/mod.rs [+11, -52]
+
+            x files affected, x additions, x deletions
+        */
+
+        let affected_files = blob_map
+            .iter()
+            .map(|(_, v)| v.keys().count())
+            .sum::<usize>();
+
+        let addition = blob_map
+            .iter()
+            .map(|(_, v)| {
+                v.iter()
+                    .map(|(_, b)| {
+                        b.iter()
+                            .filter(|i| match i {
+                                modifications::Blob::Create(_, _, _, _) => true,
+                                _ => false,
+                            })
+                            .count()
+                    })
+                    .sum::<usize>()
+            })
+            .sum::<usize>();
+
+        let deletion = blob_map
+            .iter()
+            .map(|(_, v)| {
+                v.iter()
+                    .map(|(_, b)| {
+                        b.iter()
+                            .filter(|i| match i {
+                                modifications::Blob::Delete(_, _, _, _) => true,
+                                _ => false,
+                            })
+                            .count()
+                    })
+                    .sum::<usize>()
+            })
+            .sum::<usize>();
+
+        format!(
+            "{}\n\n{}\n\n{affected_files} files affected, {} additions, {} deletions",
+            "",
+            // self.serialise_changes(),
+            utils::generate_blame_tree(&current_upstream, &tree_map, &blob_map),
+            addition,
+            deletion
+        )
     }
 
     pub fn as_map(

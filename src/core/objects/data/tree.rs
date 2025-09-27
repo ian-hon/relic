@@ -51,7 +51,7 @@ impl Tree {
     //     serde_json::to_string_pretty(&self).unwrap()
     // }
 
-    pub fn apply_changes(&mut self, changes: Change) {
+    pub fn apply_changes(&mut self, changes: &Change) {
         let (c_mod_map, mod_map) = changes.as_map();
         let c_mod_map = Arc::new(Mutex::new(c_mod_map));
 
@@ -161,10 +161,10 @@ impl Tree {
         }
     }
 
-    pub fn unapply_changes(&mut self, changes: Change) {
+    pub fn unapply_changes(&mut self, changes: &Change) {
         // TODO : test if 100% reliable
         let changes = changes.inverse();
-        self.apply_changes(changes);
+        self.apply_changes(&changes);
         // TODO : update upstream?
     }
 
