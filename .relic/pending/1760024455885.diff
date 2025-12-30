@@ -1,0 +1,17 @@
+= LOCAL 1760024455885 "change" "" no_one
++ F . .relic_ignore
+- F .%2Florem earth
+- F .%2Florem mars
+- F .%2Florem%2Fipsum temp
+- F .%2Florem%2Fipsum saturn
+=
+| . .relic_ignore
++ 0 "-- Added by Relic: Automatically ignore all git content"
++ 1 ".git/"
++ 2 ".gitignore"
++ 4 "target/"
++ 5 "Cargo.lock"
+| .%2Florem pluto
+- 0 "ashjdfskdfjs"
++ 0 "lajsdlkfsjdklfjsfsklfdashjdfskdfjs"
++ 3 ""

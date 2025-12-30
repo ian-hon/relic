@@ -1,6 +1,6 @@
-Cargo.lock
-ipsum
-lorem/
-Cargo.toml
 src/
+ipsum
 target/
+Cargo.toml
+Cargo.lock
+lorem/

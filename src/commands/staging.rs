@@ -7,6 +7,9 @@ pub fn staging(s: &mut State, _: &ArgMatches) {
         "{}",
         s.get_changes()
             .filter_changes(&s.track_set.initialise(&mut s.current))
-            .as_human_readable(&s.upstream)
+            // TODO: filter_changes is removing DeletedTree/DeletedBlob
+            // this is not intended behaviour
+            // repro: delete a file/tree, then view if its shown in `relic staging`
+            .as_human_readable(&s.upstream) // .trees
     );
 }

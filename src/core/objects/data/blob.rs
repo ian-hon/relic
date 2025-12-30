@@ -2,7 +2,7 @@ use std::{fs, path::PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{core::modifications, error::RelicError};
+use crate::core::{error::RelicError, modifications};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Blob {

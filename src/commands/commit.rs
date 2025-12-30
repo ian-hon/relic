@@ -1,9 +1,6 @@
 use clap::ArgMatches;
 
-use crate::{
-    core::{commit::Commit, state::State},
-    utils,
-};
+use crate::core::{commit::Commit, state::State, utils};
 
 pub fn commit(state: &mut State, args: &ArgMatches) {
     // push into pending stage

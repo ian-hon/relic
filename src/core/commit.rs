@@ -1,4 +1,4 @@
-use crate::{core::modifications::Change, utils};
+use crate::core::{modifications::Change, utils};
 
 const PENDING_TAG: &str = "LOCAL";
 

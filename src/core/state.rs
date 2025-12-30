@@ -5,16 +5,14 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::{
-    core::{
-        commit::Commit,
-        content_set::{ContentSet, IgnoreSet, TrackingSet},
-        modifications::Change,
-        objects::data::upstream::Upstream,
-        paths::{RELIC_PATH_IGNORE, RELIC_PATH_PENDING, RELIC_PATH_TRACKED, RELIC_PATH_UPSTREAM},
-        Blob, Content, RelicInfo, Tree,
-    },
+use crate::core::{
+    commit::Commit,
+    content_set::{ContentSet, IgnoreSet, TrackingSet},
     error::RelicError,
+    modifications::Change,
+    objects::data::upstream::Upstream,
+    paths::{RELIC_PATH_IGNORE, RELIC_PATH_PENDING, RELIC_PATH_TRACKED, RELIC_PATH_UPSTREAM},
+    Blob, Content, RelicInfo, Tree,
 };
 
 pub const DEFAULT_BRANCH: &str = "main";

@@ -2,9 +2,6 @@ use std::path::PathBuf;
 
 mod core;
 
-mod error;
-mod utils;
-
 mod cli;
 mod commands;
 

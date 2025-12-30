@@ -5,10 +5,7 @@ use std::{fs, path::PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    core::{Content, Tree},
-    error::RelicError,
-};
+use crate::core::{error::RelicError, Content, Tree};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Upstream {

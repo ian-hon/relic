@@ -4,8 +4,8 @@ use std::path::PathBuf;
 use clap::{arg, value_parser, ArgMatches, Command};
 
 use crate::commands as command_module;
+use crate::core::error::RelicError;
 use crate::core::state::State;
-use crate::error::RelicError;
 
 // add
 // commit {message}

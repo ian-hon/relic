@@ -2,10 +2,7 @@ use std::fs;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    core::{paths::RELIC_PATH_INFO, state},
-    error::RelicError,
-};
+use crate::core::{error::RelicError, paths::RELIC_PATH_INFO, state};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct RelicInfo {

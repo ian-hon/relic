@@ -10,10 +10,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    core::{content_set::ContentSet, modifications, State, Tree},
-    utils,
-};
+use crate::core::{content_set::ContentSet, modifications, utils, State, Tree};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Change {
@@ -41,6 +38,7 @@ impl Change {
         // HashMap<String, HashMap<String, Vec<modifications::Blob>>>,
 
         let mut changes = self.clone();
+        println!("{:?}", self.trees);
         changes.trees = changes
             .trees
             .clone()
@@ -52,6 +50,7 @@ impl Change {
                 _ => true,
             })
             .collect::<Vec<modifications::Tree>>();
+        println!("{:?}", self.trees);
 
         let (tree_map, blob_map) = self.as_map();
 
