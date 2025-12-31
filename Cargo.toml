@@ -18,7 +18,7 @@ repository = "https://github.com/ian-hon/relic"
 readme = false
 
 [dependencies]
-sha256 = "1.5.0"
+sha2 = "0.10.9"
 
 strum = "0.26.3"
 strum_macros = "0.26.3"
