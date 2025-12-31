@@ -1,6 +1,6 @@
 use crate::core::data::util::{empty_oid, oid_to_string};
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct ObjectID([u8; 32]);
 impl ObjectID {
     pub fn new(oid: [u8; 32]) -> ObjectID {

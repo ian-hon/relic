@@ -1,5 +1,6 @@
 use crate::core::data::{blob::Blob, oid::ObjectID, tree::Tree};
 
+#[derive(Debug)]
 pub enum ObjectType {
     Tree,
     Blob,
