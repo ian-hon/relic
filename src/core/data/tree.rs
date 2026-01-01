@@ -1,3 +1,12 @@
+use std::str::FromStr;
+use std::{fs, path::Path};
+
+use crate::core::error::IOError;
+use crate::core::object::{ObjectLike, ObjectType};
+use crate::core::oid::ObjectID;
+use crate::core::util::{oid_digest, string_to_oid};
+use crate::core::{data::blob::Blob, error::RelicError};
+
 /*
 Order by type (trees first) then filename (a-z)
 
@@ -10,23 +19,12 @@ B hash {blob_name}
 B hash {blob_name}
 */
 
-use std::str::FromStr;
-use std::{fs, path::Path};
-
-use crate::core::{
-    data::{
-        blob::Blob,
-        object::{ObjectLike, ObjectType},
-        oid::ObjectID,
-        util::{oid_digest, string_to_oid},
-    },
-    error::RelicError,
-};
+const HEADER: &str = "T\0";
 
 #[derive(Debug)]
 pub struct Tree {
+    oid: ObjectID,
     pub children: Vec<TreeEntry>,
-    pub oid: ObjectID,
 }
 
 impl Tree {
@@ -41,10 +39,13 @@ impl Tree {
         t
     }
 
-    pub fn from_string(content: &str) -> Option<Tree> {
+    pub fn deserialise(payload: Vec<u8>) -> Option<Tree> {
+        // takes payload and deserialises into Option<Tree>
+        let payload = str::from_utf8(&payload).unwrap();
+
         let mut children = vec![];
 
-        for line in content.lines() {
+        for line in payload.lines() {
             let mut l = line.split(" ");
             let otype = l.next()?;
             let oid = l.next()?;
@@ -74,7 +75,7 @@ impl Tree {
             Ok(r) => r,
             Err(e) => {
                 println!("state.rs (content_at) get all dirs : {root_path:?} : {e:?}");
-                return Err(RelicError::FileCantOpen);
+                return Err(RelicError::IOError(IOError::FileCantOpen));
             }
         };
 
@@ -91,7 +92,7 @@ impl Tree {
                     println!("{file_path:?}");
 
                     if file_type.is_file() {
-                        match Blob::load_from_path(&file_path, sanctum_path) {
+                        match Blob::build_blob(&file_path, sanctum_path) {
                             Ok(b) => {
                                 children.push(TreeEntry {
                                     oid: b.get_oid(),
@@ -136,6 +137,12 @@ impl Tree {
     }
 
     fn string_from_children(children: &Vec<TreeEntry>) -> String {
+        // format:
+        // T abcdef12345 tree_name
+        // T abcdef12345 tree_name
+        // B abcdef12345 blob_name
+        // T abcdef12345 tree_name
+        // B abcdef12345 blob_name
         children
             .iter()
             .map(|c| format!("{} {} {}", c.otype.to_string(), c.oid.to_string(), c.name))
@@ -145,8 +152,12 @@ impl Tree {
                 left.push_str("\n");
                 left
             })
-            .trim_end()
+            .trim_end() // remove the singular trailing \n
             .to_string() // EXPENSIVE!
+    }
+
+    fn as_payload(&self) -> String {
+        format!("{HEADER}{}", Self::string_from_children(&self.children))
     }
 }
 
@@ -157,6 +168,10 @@ impl ObjectLike for Tree {
 
     fn as_string(&self) -> String {
         Tree::string_from_children(&self.children)
+    }
+
+    fn serialise(&self) -> String {
+        self.as_payload()
     }
 }
 

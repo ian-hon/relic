@@ -1,6 +1,10 @@
 use std::{fs, path::Path};
 
-use crate::core::data::{blob::Blob, oid::ObjectID, tree::Tree};
+use crate::core::{
+    data::{blob::Blob, tree::Tree},
+    error::{IOError, RelicError},
+    oid::ObjectID,
+};
 
 use strum_macros::{Display, EnumString, IntoStaticStr};
 
@@ -12,15 +16,6 @@ pub enum ObjectType {
     #[strum(serialize = "B")]
     Blob,
 }
-// impl ToString for ObjectType {
-//     fn to_string(&self) -> String {
-//         match self {
-//             ObjectType::Blob => "B".to_string(),
-//             ObjectType::Tree => "T".to_string(),
-//             _ => unimplemented!(),
-//         }
-//     }
-// }
 
 // Holds either a Blob or Tree
 pub enum Object {
@@ -31,14 +26,21 @@ pub enum Object {
 pub trait ObjectLike {
     fn get_oid(&self) -> ObjectID;
     fn as_string(&self) -> String;
-    fn write(&self, sanctum_path: &Path) {
+    fn serialise(&self) -> String;
+    fn write(&self, sanctum_path: &Path) -> Option<RelicError> {
         let (prefix_path, suffix_path) = self.get_oid().get_paths(sanctum_path);
 
         // check if prefix exists
         if !prefix_path.exists() {
-            fs::create_dir(prefix_path).expect("create_dir err");
+            if let Err(_) = fs::create_dir(prefix_path) {
+                return Some(RelicError::IOError(IOError::DirectoryCantCreate));
+            }
         }
 
-        let _ = fs::write(suffix_path, self.as_string());
+        if let Err(_) = fs::write(suffix_path, self.serialise()) {
+            return Some(RelicError::IOError(IOError::FileCantCreate));
+        }
+
+        None
     }
 }

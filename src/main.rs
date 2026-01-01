@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::core::data::{object::ObjectLike, tree::Tree};
+use crate::core::{data::tree::Tree, object::ObjectLike};
 
 mod core;
 
@@ -16,6 +16,8 @@ fn main() {
 
         println!("{}", t.get_oid().to_string());
     }
+
+    // println!("{:?}", "T\0lorem ipsum".as_bytes());
 
     // let command_handler = cli::build();
     // let state = State::create(PathBuf::from("."));

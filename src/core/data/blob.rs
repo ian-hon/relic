@@ -4,8 +4,11 @@ use std::{
 };
 
 use crate::core::{
-    data::{object::ObjectLike, oid::ObjectID, util::oid_digest_data},
-    error::RelicError,
+    // data::{object::ObjectLike, oid::ObjectID, util::oid_digest_data},
+    error::{IOError, RelicError},
+    object::ObjectLike,
+    oid::ObjectID,
+    util::oid_digest_data,
 };
 
 /*
@@ -14,17 +17,24 @@ B\0
 {actual content}
 */
 
+const HEADER: &str = "B\0";
+
 pub struct Blob {
-    pub oid: ObjectID,
-    pub length: usize,
-    pub content: Vec<u8>,
+    oid: ObjectID,
+    pub payload: Vec<u8>,
 }
 impl Blob {
-    pub fn new(raw: Vec<u8>, sanctum_path: &Path) -> Blob {
+    pub fn new(mut raw: Vec<u8>, sanctum_path: &Path) -> Blob {
+        // raw does NOT contain header
+        // raw contains ONLY the raw data
+
+        // TODO: test
+        let mut payload = HEADER.as_bytes()[..].to_vec();
+        payload.append(&mut raw);
+
         let b = Blob {
-            oid: ObjectID::new(oid_digest_data(&raw)),
-            length: raw.len(),
-            content: raw,
+            oid: ObjectID::new(oid_digest_data(&payload)),
+            payload,
         };
 
         b.write(sanctum_path);
@@ -32,16 +42,62 @@ impl Blob {
         b
     }
 
-    pub fn load_from_path(path: &Path, sanctum_path: &Path) -> Result<Blob, RelicError> {
+    pub fn deserialise(payload: Vec<u8>) -> Blob {
+        // payload includes header
+        // just directly compute oid, dont need to write to sanctum for this
+
+        Blob {
+            oid: ObjectID::new(oid_digest_data(&payload)),
+            payload,
+        }
+    }
+
+    pub fn deserialise_and_write(
+        payload: Vec<u8>,
+        sanctum_path: &Path,
+    ) -> Result<Blob, RelicError> {
+        let b = Blob {
+            oid: ObjectID::new(oid_digest_data(&payload)),
+            payload,
+        };
+
+        match b.write(sanctum_path) {
+            Some(e) => Err(e),
+            None => Ok(b),
+        }
+    }
+
+    pub fn get_body(&self) -> Option<Vec<u8>> {
+        // just removes the header and returns body only
+        Self::extract_body(&self.payload)
+    }
+
+    pub fn build_blob(path: &Path, sanctum_path: &Path) -> Result<Blob, RelicError> {
+        // build blob from regular file
         if let Ok(c) = fs::read(path) {
             return Ok(Blob::new(c, sanctum_path));
         }
 
-        Err(RelicError::FileCantOpen)
+        Err(RelicError::IOError(IOError::FileCantOpen))
     }
 
-    pub fn as_string(&self) -> Option<String> {
-        str::from_utf8(&self.content).map_or(None, |s| Some(s.to_string())) // EXPENSIVE!
+    fn extract_body(payload: &Vec<u8>) -> Option<Vec<u8>> {
+        // just removes the header and returns body only
+        if payload.len() < 2 {
+            return None;
+        }
+
+        // B\0
+        //  B: [0]
+        // \0: [1]
+        let delimiter = payload[1];
+        // HARDCODED!
+        if delimiter != 0 {
+            // if delimiter != \0, then something is wrong
+            return None;
+        }
+
+        Some(payload[..2].to_vec()) // EXPENSIVE!
     }
 }
 
@@ -52,6 +108,14 @@ impl ObjectLike for Blob {
 
     fn as_string(&self) -> String {
         // TODO: handle invalid utf-8s
-        self.as_string().unwrap_or_else(|| "".to_string())
+        if let Some(body) = self.get_body() {
+            return str::from_utf8(&body).map_or("".to_string(), |s| s.to_string());
+        }
+        "".to_string()
+    }
+
+    fn serialise(&self) -> String {
+        // TODO: handle invalid utf-8s
+        str::from_utf8(&self.payload).map_or("".to_string(), |s| s.to_string())
     }
 }
