@@ -10,8 +10,8 @@ use crate::core::{
         tree::Tree,
         // util::{empty_oid, oid_to_string},
     },
-    error::{RelicError, SanctumError},
-    object::Object,
+    error::{IOError, RelicError, SanctumError},
+    object::{Object, ObjectLike, ObjectType},
     util::{empty_oid, oid_to_string},
 };
 
@@ -51,9 +51,36 @@ impl ObjectID {
 
         let (prefix_path, suffix_path) = self.get_paths(sanctum_path);
 
+        // println!("{prefix_path:?}\t{suffix_path:?}");
+
         // check if prefix & suffix exists
         if prefix_path.exists() && suffix_path.exists() {
             // TODO: infer ObjectType from header
+
+            if let Ok(payload) = fs::read(suffix_path) {
+                if let Some(t) = Object::extract_header(&payload) {
+                    println!("extracted_header");
+                    match t {
+                        ObjectType::Blob => {
+                            let b = Blob::deserialise(payload);
+
+                            println!("Blob\n\n{:?}", b.serialise());
+
+                            return Ok(Object::Blob(b));
+                        }
+                        ObjectType::Tree => {
+                            if let Some(t) = Tree::deserialise(payload) {
+                                println!("Tree\n\n{:?}", t.serialise());
+
+                                return Ok(Object::Tree(t));
+                            }
+                            println!("deserialise failed");
+                            return Err(RelicError::ConfigurationIncorrect);
+                        }
+                    }
+                }
+                return Err(RelicError::ConfigurationIncorrect);
+            }
             // match otype {
             //     ObjectType::Tree => {
             //         if let Ok(content) = fs::read_to_string(suffix_path) {
@@ -74,7 +101,7 @@ impl ObjectID {
             //     }
             // }
 
-            // Err(RelicError::FileCantOpen)
+            return Err(RelicError::IOError(IOError::FileCantOpen));
         }
 
         Err(RelicError::SanctumError(SanctumError::RecordNoExist))

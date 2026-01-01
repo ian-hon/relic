@@ -45,7 +45,10 @@ impl Tree {
 
         let mut children = vec![];
 
-        for line in payload.lines() {
+        let mut lines = payload.lines();
+        lines.next(); // skip the header
+
+        while let Some(line) = lines.next() {
             let mut l = line.split(" ");
             let otype = l.next()?;
             let oid = l.next()?;
@@ -135,6 +138,8 @@ impl Tree {
 
         Ok(Tree::from_children(children, sanctum_path))
     }
+
+    // pub fn construct_children() ->
 
     fn string_from_children(children: &Vec<TreeEntry>) -> String {
         // format:

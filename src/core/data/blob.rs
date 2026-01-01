@@ -19,6 +19,7 @@ B\0
 
 const HEADER: &str = "B\0";
 
+#[derive(Debug)]
 pub struct Blob {
     oid: ObjectID,
     pub payload: Vec<u8>,

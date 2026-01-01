@@ -14,7 +14,16 @@ pub fn oid_to_string(oid: [u8; 32]) -> String {
 }
 
 pub fn string_to_oid(content: &str) -> [u8; 32] {
-    content.as_bytes().try_into().unwrap()
+    // will this haunt me later?
+
+    // let content = content.to_string();
+    let content = format!("{:0>64}", content);
+    (0..content.len())
+        .step_by(2)
+        .map(|i| u8::from_str_radix(&content[i..i + 2], 16).unwrap())
+        .collect::<Vec<u8>>()
+        .try_into()
+        .unwrap()
 }
 
 pub fn oid_digest(content: &str) -> [u8; 32] {

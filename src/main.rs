@@ -1,6 +1,8 @@
 use std::path::Path;
 
-use crate::core::{data::tree::Tree, object::ObjectLike};
+use relic_vcs::core::util::oid_to_string;
+
+use crate::core::{data::tree::Tree, object::ObjectLike, oid::ObjectID, util::string_to_oid};
 
 mod core;
 
@@ -16,6 +18,11 @@ fn main() {
 
         println!("{}", t.get_oid().to_string());
     }
+
+    let s: ObjectID =
+        string_to_oid("4f54324bb72cefa823170ca06d42cfde41e7d955cdd46ab6532d2a3447968124").into();
+
+    // println!("{:?}", s.construct(Path::new(".relic/sanctum")));
 
     // println!("{:?}", "T\0lorem ipsum".as_bytes());
 

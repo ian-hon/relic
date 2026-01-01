@@ -1,4 +1,4 @@
-use std::{fs, path::Path};
+use std::{fs, path::Path, str::FromStr};
 
 use crate::core::{
     data::{blob::Blob, tree::Tree},
@@ -16,11 +16,35 @@ pub enum ObjectType {
     #[strum(serialize = "B")]
     Blob,
 }
+impl ObjectType {
+    pub fn from_u8(b: u8) -> Option<ObjectType> {
+        // EXPENSIVE!
+        str::from_utf8(&[b]).map_or_else(
+            |_| None,
+            |t| ObjectType::from_str(t).map_or_else(|_| None, |t| Some(t)),
+        )
+    }
+
+    pub fn to_u8(&self) -> u8 {
+        // EXPENSIVE!
+        self.to_string().as_bytes()[0]
+    }
+}
 
 // Holds either a Blob or Tree
+#[derive(Debug)]
 pub enum Object {
     Blob(Blob),
     Tree(Tree),
+}
+impl Object {
+    pub fn extract_header(payload: &Vec<u8>) -> Option<ObjectType> {
+        if payload.len() < 2 {
+            return None;
+        }
+
+        ObjectType::from_u8(payload[0])
+    }
 }
 
 pub trait ObjectLike {
