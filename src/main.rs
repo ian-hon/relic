@@ -9,6 +9,12 @@ mod core;
 mod cli;
 mod commands;
 
+/*
+get ref system working
+
+
+*/
+
 fn main() {
     let s = Tree::build_tree(Path::new("."), Path::new(".relic/sanctum"));
     println!("{:?}", s);

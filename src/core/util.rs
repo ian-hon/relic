@@ -1,5 +1,8 @@
 use sha2::{Digest, Sha256};
+use urlencoding::{decode, encode};
 
+// #region OID
+// TODO: separate these out somewhere else
 pub fn empty_oid() -> [u8; 32] {
     [
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -33,3 +36,14 @@ pub fn oid_digest(content: &str) -> [u8; 32] {
 pub fn oid_digest_data(content: &Vec<u8>) -> [u8; 32] {
     Sha256::digest(content).as_slice().try_into().unwrap()
 }
+// #endregion
+
+// #region url encoding
+pub fn url_encode(s: &str) -> String {
+    encode(s).into_owned()
+}
+
+pub fn url_decode(s: &str) -> String {
+    decode(s).unwrap().into_owned()
+}
+// #endregion

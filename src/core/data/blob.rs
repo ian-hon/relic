@@ -108,6 +108,8 @@ impl ObjectLike for Blob {
     }
 
     fn as_string(&self) -> String {
+        // returns without header
+
         // TODO: handle invalid utf-8s
         if let Some(body) = self.get_body() {
             return str::from_utf8(&body).map_or("".to_string(), |s| s.to_string());
@@ -116,6 +118,8 @@ impl ObjectLike for Blob {
     }
 
     fn serialise(&self) -> String {
+        // returns with header
+
         // TODO: handle invalid utf-8s
         str::from_utf8(&self.payload).map_or("".to_string(), |s| s.to_string())
     }

@@ -4,7 +4,7 @@ use std::{fs, path::Path};
 use crate::core::error::IOError;
 use crate::core::object::{ObjectLike, ObjectType};
 use crate::core::oid::ObjectID;
-use crate::core::util::{oid_digest, string_to_oid};
+use crate::core::util::{empty_oid, oid_digest, string_to_oid};
 use crate::core::{data::blob::Blob, error::RelicError};
 
 /*
@@ -29,10 +29,15 @@ pub struct Tree {
 
 impl Tree {
     fn from_children(children: Vec<TreeEntry>, sanctum_path: &Path) -> Tree {
-        let t = Tree {
-            oid: oid_digest(&Tree::string_from_children(&children)).into(),
+        let mut t = Tree {
+            // oid: oid_digest(&Tree::string_from_children(&children)).into(),
+            oid: empty_oid().into(),
             children,
         };
+
+        // t.oid = t.as_payload()
+        // TODO: test
+        t.oid = oid_digest(&t.serialise()).into();
 
         t.write(sanctum_path);
 
@@ -172,10 +177,12 @@ impl ObjectLike for Tree {
     }
 
     fn as_string(&self) -> String {
+        // returns without header
         Tree::string_from_children(&self.children)
     }
 
     fn serialise(&self) -> String {
+        // returns with header
         self.as_payload()
     }
 }
