@@ -2,22 +2,23 @@
 Order by type (trees first) then filename (a-z)
 
 Tree format:
-T {byte length}\0
-T {tree_name} hash
-T {tree_name} hash
-T {tree_name} hash
-B {blob_name} hash
-B {blob_name} hash
+T\0
+T hash {tree_name}
+T hash {tree_name}
+T hash {tree_name}
+B hash {blob_name}
+B hash {blob_name}
 */
 
+use std::str::FromStr;
 use std::{fs, path::Path};
 
 use crate::core::{
     data::{
         blob::Blob,
-        object::{Object, ObjectType},
+        object::{ObjectLike, ObjectType},
         oid::ObjectID,
-        util::oid_digest,
+        util::{oid_digest, string_to_oid},
     },
     error::RelicError,
 };
@@ -25,22 +26,46 @@ use crate::core::{
 #[derive(Debug)]
 pub struct Tree {
     pub children: Vec<TreeEntry>,
-    oid: ObjectID,
+    pub oid: ObjectID,
 }
 
 impl Tree {
-    pub fn new() -> Tree {
-        Tree {
-            children: vec![],
-            oid: ObjectID::empty(),
-        }
-    }
-
-    fn from_children(children: Vec<TreeEntry>) -> Tree {
-        Tree {
+    fn from_children(children: Vec<TreeEntry>, sanctum_path: &Path) -> Tree {
+        let t = Tree {
             oid: oid_digest(&Tree::string_from_children(&children)).into(),
             children,
+        };
+
+        t.write(sanctum_path);
+
+        t
+    }
+
+    pub fn from_string(content: &str) -> Option<Tree> {
+        let mut children = vec![];
+
+        for line in content.lines() {
+            let mut l = line.split(" ");
+            let otype = l.next()?;
+            let oid = l.next()?;
+            let file_name = l.collect::<Vec<&str>>();
+
+            if file_name.is_empty() {
+                return None;
+            }
+            let file_name = file_name.join(" ");
+
+            children.push(TreeEntry {
+                oid: string_to_oid(oid).into(),
+                name: file_name,
+                otype: ObjectType::from_str(otype).ok()?,
+            })
         }
+
+        Some(Tree {
+            oid: oid_digest(&Tree::string_from_children(&children)).into(),
+            children,
+        })
     }
 
     // walks this path and constructs a Tree object from it
@@ -66,7 +91,7 @@ impl Tree {
                     println!("{file_path:?}");
 
                     if file_type.is_file() {
-                        match Blob::load_from_path(&file_path) {
+                        match Blob::load_from_path(&file_path, sanctum_path) {
                             Ok(b) => {
                                 children.push(TreeEntry {
                                     oid: b.get_oid(),
@@ -82,6 +107,10 @@ impl Tree {
                         }
 
                         if file_name.eq(".git") {
+                            continue;
+                        }
+
+                        if file_name.eq(".relic") {
                             continue;
                         }
 
@@ -103,13 +132,13 @@ impl Tree {
             }
         }
 
-        Ok(Tree::from_children(children))
+        Ok(Tree::from_children(children, sanctum_path))
     }
 
     fn string_from_children(children: &Vec<TreeEntry>) -> String {
         children
             .iter()
-            .map(|c| format!("{} {} {}", c.otype.to_string(), c.name, c.oid.to_string()))
+            .map(|c| format!("{} {} {}", c.otype.to_string(), c.oid.to_string(), c.name))
             .fold(String::new(), |mut left, right| {
                 left.reserve(right.len() + 1);
                 left.push_str(&right);
@@ -121,7 +150,7 @@ impl Tree {
     }
 }
 
-impl Object for Tree {
+impl ObjectLike for Tree {
     fn get_oid(&self) -> ObjectID {
         self.oid
     }
@@ -134,6 +163,6 @@ impl Object for Tree {
 #[derive(Debug)]
 pub struct TreeEntry {
     oid: ObjectID,
-    name: String,
+    name: String, // use OsString instead?
     otype: ObjectType,
 }

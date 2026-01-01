@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::core::data::{object::Object, tree::Tree};
+use crate::core::data::{object::ObjectLike, tree::Tree};
 
 mod core;
 
@@ -8,11 +8,13 @@ mod cli;
 mod commands;
 
 fn main() {
-    let s = Tree::build_tree(Path::new("."), Path::new(""));
+    let s = Tree::build_tree(Path::new("."), Path::new(".relic/sanctum"));
     println!("{:?}", s);
 
     if let Ok(t) = s {
         println!("{}", t.as_string());
+
+        println!("{}", t.get_oid().to_string());
     }
 
     // let command_handler = cli::build();

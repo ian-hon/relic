@@ -1,42 +1,40 @@
 use std::{
-    fs::{self, File},
+    fs::{self},
     path::Path,
 };
 
-use sha2::{Digest, Sha256};
-
 use crate::core::{
-    data::{
-        object::Object,
-        oid::ObjectID,
-        util::{oid_digest, oid_digest_data},
-    },
+    data::{object::ObjectLike, oid::ObjectID, util::oid_digest_data},
     error::RelicError,
 };
 
 /*
 Blob format:
-header not necessary
+B\0
 {actual content}
 */
 
 pub struct Blob {
     pub oid: ObjectID,
-    length: usize,
+    pub length: usize,
     pub content: Vec<u8>,
 }
 impl Blob {
-    pub fn new(raw: Vec<u8>) -> Blob {
-        Blob {
+    pub fn new(raw: Vec<u8>, sanctum_path: &Path) -> Blob {
+        let b = Blob {
             oid: ObjectID::new(oid_digest_data(&raw)),
             length: raw.len(),
             content: raw,
-        }
+        };
+
+        b.write(sanctum_path);
+
+        b
     }
 
-    pub fn load_from_path(path: &Path) -> Result<Blob, RelicError> {
+    pub fn load_from_path(path: &Path, sanctum_path: &Path) -> Result<Blob, RelicError> {
         if let Ok(c) = fs::read(path) {
-            return Ok(Blob::new(c));
+            return Ok(Blob::new(c, sanctum_path));
         }
 
         Err(RelicError::FileCantOpen)
@@ -47,12 +45,13 @@ impl Blob {
     }
 }
 
-impl Object for Blob {
+impl ObjectLike for Blob {
     fn get_oid(&self) -> ObjectID {
         self.oid.clone() // EXPENSIVE!
     }
 
     fn as_string(&self) -> String {
+        // TODO: handle invalid utf-8s
         self.as_string().unwrap_or_else(|| "".to_string())
     }
 }
