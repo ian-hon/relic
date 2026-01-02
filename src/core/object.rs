@@ -1,7 +1,7 @@
 use std::{fs, path::Path, str::FromStr};
 
 use crate::core::{
-    data::{blob::Blob, tree::Tree},
+    data::{blob::Blob, commit::Commit, tree::Tree},
     error::{IOError, RelicError},
     oid::ObjectID,
 };
@@ -15,6 +15,9 @@ pub enum ObjectType {
 
     #[strum(serialize = "B")]
     Blob,
+
+    #[strum(serialize = "C")]
+    Commit,
 }
 impl ObjectType {
     pub fn from_u8(b: u8) -> Option<ObjectType> {
@@ -36,6 +39,7 @@ impl ObjectType {
 pub enum Object {
     Blob(Blob),
     Tree(Tree),
+    Commit(Commit),
 }
 impl Object {
     pub fn extract_header(payload: &Vec<u8>) -> Option<ObjectType> {

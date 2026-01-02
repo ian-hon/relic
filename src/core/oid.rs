@@ -4,12 +4,7 @@ use std::{
 };
 
 use crate::core::{
-    data::{
-        blob::Blob,
-        // object::{Object, ObjectType},
-        tree::Tree,
-        // util::{empty_oid, oid_to_string},
-    },
+    data::{blob::Blob, commit::Commit, tree::Tree},
     error::{IOError, RelicError, SanctumError},
     object::{Object, ObjectLike, ObjectType},
     util::{empty_oid, oid_to_string},
@@ -76,6 +71,13 @@ impl ObjectID {
                             }
                             println!("deserialise failed");
                             return Err(RelicError::ConfigurationIncorrect);
+                        }
+                        ObjectType::Commit => {
+                            if let Some(c) = Commit::deserialise(payload) {
+                                println!("Commit\n\n{:?}", c.serialise());
+                            }
+
+                            unimplemented!()
                         }
                     }
                 }
