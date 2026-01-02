@@ -9,8 +9,11 @@ pub enum RelicError {
 
 #[derive(Debug)]
 pub enum IOError {
+    FileNoExist,
     FileCantOpen,
     FileCantCreate,
+    DirectoryNoExist,
+    DirectoryCantOpen,
     DirectoryCantCreate,
 }
 

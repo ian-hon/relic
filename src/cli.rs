@@ -7,8 +7,9 @@ use crate::commands as command_module;
 use clap::{arg, value_parser, ArgMatches, Command};
 
 // &Path holds the path where this is run
+// &Path holds the .relic directory
 // &ArgMatches holds the command's arguments
-pub type CommandType = fn(&Path, &ArgMatches);
+pub type CommandType = fn(&Path, &Path, &ArgMatches);
 
 pub struct CommandHandler {
     commands: HashMap<String, CommandType>,
@@ -139,7 +140,7 @@ pub fn handle(command_handler: CommandHandler, args: ArgMatches, path: &Path) {
             }
             _ => match command_handler.commands.get(command_name) {
                 Some(command) => {
-                    command(path, sub_matches);
+                    command(path, &relic_path, sub_matches);
                 }
                 None => {
                     unimplemented!("Relic Error, command not defined.");
@@ -153,7 +154,7 @@ pub fn handle(command_handler: CommandHandler, args: ArgMatches, path: &Path) {
                 // clone, init
                 match command_handler.commands.get(command_name) {
                     Some(command) => {
-                        command(path, sub_matches);
+                        command(path, &relic_path, sub_matches);
                     }
                     None => {
                         unimplemented!("Relic Error, command not defined.");

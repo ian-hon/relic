@@ -5,3 +5,4 @@ pub mod object;
 pub mod oid;
 
 pub mod data;
+pub mod state;

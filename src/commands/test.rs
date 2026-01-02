@@ -12,12 +12,12 @@ use crate::core::{
     util::{get_time, string_to_oid},
 };
 
-pub fn test(path: &Path, _: &ArgMatches) {
+pub fn test(path: &Path, relic_path: &Path, _: &ArgMatches) {
     // if let Ok(s) = Tree::build_tree(path, &path.join(".relic/sanctum")) {
     //     println!("{}", s.get_oid().to_string());
     // }
 
-    let sanctum_path = path.join(".relic/sanctum");
+    let sanctum_path = relic_path.join("sanctum");
 
     // tree: fcd55f8ce8996546d9a9001bddae06c6800f92f5015943535a7bf6980c0e9600
     // let c = Commit::new(
@@ -53,7 +53,7 @@ pub fn test(path: &Path, _: &ArgMatches) {
         "{:?}",
         match Commit::get_state(
             match ObjectID::from_string(
-                "0a5d78505b7904241133c6a06ac130cc4dc5f8f378177970c3cd5f000f81ad02"
+                "3ff716050b04ab3a7dd4575d0f436018ad03df6718f0c57a52cd15f039069454"
             )
             .construct(&sanctum_path)
             {
@@ -64,7 +64,7 @@ pub fn test(path: &Path, _: &ArgMatches) {
                 _ => panic!("2"),
             },
             match ObjectID::from_string(
-                "e70dc52f20550140dd4ad5b4d65a50daa34260d75e0bdcd0316a62238b907025"
+                "b565162264c6be6be2e62918cc67022ffd49f4953511dca56a4687714f20bf97"
             )
             .construct(&sanctum_path)
             {
@@ -80,4 +80,23 @@ pub fn test(path: &Path, _: &ArgMatches) {
             i => format!("{i:?}"),
         }
     );
+
+    // let c = match ObjectID::from_string(
+    //     "d6ec2763bee6e67ec489bf7edcc08678c94c9d9b40d37dcecf88d681ba204336",
+    // )
+    // .construct(&sanctum_path)
+    // {
+    //     Ok(r) => match r {
+    //         Object::Commit(c) => c,
+    //         _ => panic!("3"),
+    //     },
+    //     _ => panic!("4"),
+    // };
+
+    // println!("{}", c.get_oid().to_string());
+
+    // let s = Commit::deserialise(c.serialise().as_bytes().to_vec()).unwrap();
+    // println!("{}", s.get_oid().to_string());
+
+    // d6ec2763bee6e67ec489bf7edcc08678c94c9d9b40d37dcecf88d681ba204336
 }

@@ -123,6 +123,10 @@ impl Tree {
                             continue;
                         }
 
+                        if file_name.eq("src") {
+                            continue;
+                        }
+
                         match Tree::build_tree(&file_path, sanctum_path) {
                             Ok(t) => children.push(TreeEntry {
                                 oid: t.get_oid(),

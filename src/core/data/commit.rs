@@ -12,7 +12,7 @@ tree {oid}
 parent {oid}
 timestamp
 author
-title
+message
 description
 */
 
@@ -25,7 +25,7 @@ pub struct Commit {
     pub parent: Option<ObjectID>, // commit before this one
     pub timestamp: u64,
     pub author: String,      // lets assume author names follow a strict format
-    pub title: String,       // url encoded when saved
+    pub message: String,     // url encoded when saved
     pub description: String, // url encoded when saved
 }
 impl Commit {
@@ -34,7 +34,7 @@ impl Commit {
         parent: Option<ObjectID>,
         timestamp: u64,
         author: String,
-        title: String,
+        message: String,
         description: String,
 
         sanctum_path: &Path,
@@ -45,7 +45,7 @@ impl Commit {
             parent,
             timestamp,
             author,
-            title,
+            message,
             description,
         };
 
@@ -65,16 +65,18 @@ impl Commit {
         // parent {oid}
         // timestamp
         // author
-        // title
+        // message
         // description
         format!(
             "tree {}\nparent {}\n{}\n{}\n{}\n{}",
             self.tree.to_string(),
-            self.parent
-                .map_or_else(|| "".to_string(), |p| p.to_string()),
+            self.parent.map_or_else(
+                || Into::<ObjectID>::into(empty_oid()).to_string(),
+                |p| p.to_string()
+            ),
             self.timestamp,
             self.author,
-            url_encode(&self.title),
+            url_encode(&self.message),
             url_encode(&self.description)
         )
     }
@@ -96,7 +98,7 @@ impl Commit {
             Err(_) => return None,
         };
         let author = lines.next()?.to_string();
-        let title = url_decode(lines.next()?);
+        let message = url_decode(lines.next()?);
         let description = url_decode(lines.next().unwrap_or(""));
 
         /*
@@ -104,7 +106,7 @@ impl Commit {
         parent {oid}
         timestamp
         author
-        title
+        message
         description
         */
 
@@ -115,9 +117,15 @@ impl Commit {
         let tree: ObjectID = string_to_oid(tree_elements[1]).into();
 
         let parent_elements = parent.split(" ").collect::<Vec<&str>>();
-        let parent = match parent_elements.len() {
-            2 => Some(string_to_oid(parent_elements[1]).into()),
-            _ => None,
+        if parent_elements.len() < 2 {
+            return None;
+        }
+        let parent: ObjectID = Into::<ObjectID>::into(string_to_oid(parent_elements[1]));
+        // if theres a collision with 64 0s then ill be super happy
+        let parent = if parent == empty_oid().into() {
+            None
+        } else {
+            Some(parent)
         };
 
         let mut c = Commit {
@@ -126,7 +134,7 @@ impl Commit {
             parent,
             timestamp,
             author,
-            title,
+            message,
             description,
         };
 
