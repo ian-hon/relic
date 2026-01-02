@@ -1,3 +1,5 @@
+use std::time::{SystemTime, UNIX_EPOCH};
+
 use sha2::{Digest, Sha256};
 use urlencoding::{decode, encode};
 
@@ -47,3 +49,10 @@ pub fn url_decode(s: &str) -> String {
     decode(s).unwrap().into_owned()
 }
 // #endregion
+
+pub fn get_time() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("time went backwards (???)")
+        .as_millis() as u64
+}

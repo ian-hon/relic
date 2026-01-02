@@ -7,14 +7,18 @@ use crate::core::{
     data::{blob::Blob, commit::Commit, tree::Tree},
     error::{IOError, RelicError, SanctumError},
     object::{Object, ObjectLike, ObjectType},
-    util::{empty_oid, oid_to_string},
+    util::{empty_oid, oid_to_string, string_to_oid},
 };
 
-#[derive(Clone, Copy, Debug)]
-pub struct ObjectID([u8; 32]);
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ObjectID(pub [u8; 32]);
 impl ObjectID {
     pub fn new(oid: [u8; 32]) -> ObjectID {
         ObjectID(oid)
+    }
+
+    pub fn from_string(content: &str) -> ObjectID {
+        ObjectID(string_to_oid(content))
     }
 
     pub fn get_segments(&self) -> (String, String) {
@@ -54,7 +58,6 @@ impl ObjectID {
 
             if let Ok(payload) = fs::read(suffix_path) {
                 if let Some(t) = Object::extract_header(&payload) {
-                    println!("extracted_header");
                     match t {
                         ObjectType::Blob => {
                             let b = Blob::deserialise(payload);
@@ -74,10 +77,13 @@ impl ObjectID {
                         }
                         ObjectType::Commit => {
                             if let Some(c) = Commit::deserialise(payload) {
-                                println!("Commit\n\n{:?}", c.serialise());
+                                // println!("Commit\n\n{:?}", c.serialise());
+
+                                return Ok(Object::Commit(c));
                             }
 
-                            unimplemented!()
+                            println!("commit deserialise failed");
+                            return Err(RelicError::ConfigurationIncorrect);
                         }
                     }
                 }

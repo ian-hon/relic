@@ -49,6 +49,25 @@ impl Object {
 
         ObjectType::from_u8(payload[0])
     }
+
+    pub fn extract_body(payload: &Vec<u8>) -> Option<Vec<u8>> {
+        // just removes the header and returns body only
+        if payload.len() < 2 {
+            return None;
+        }
+
+        // // B\0
+        // //  B: [0]
+        // // \0: [1]
+        // let delimiter = payload[1];
+        // // HARDCODED!
+        // if delimiter != 0 {
+        //     // if delimiter != \0, then something is wrong
+        //     return None;
+        // }
+
+        Some(payload[2..].to_vec()) // EXPENSIVE!
+    }
 }
 
 pub trait ObjectLike {

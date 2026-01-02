@@ -6,7 +6,8 @@ use std::{
 use crate::commands as command_module;
 use clap::{arg, value_parser, ArgMatches, Command};
 
-// pub type CommandType = fn(&mut State, &ArgMatches);
+// &Path holds the path where this is run
+// &ArgMatches holds the command's arguments
 pub type CommandType = fn(&Path, &ArgMatches);
 
 pub struct CommandHandler {
@@ -122,11 +123,13 @@ naively reinvent the wheel."#,
     }
 }
 
-pub fn handle(command_handler: CommandHandler, args: ArgMatches, relic_path: Option<&Path>) {
+pub fn handle(command_handler: CommandHandler, args: ArgMatches, path: &Path) {
     let (command_name, sub_matches) = args.subcommand().unwrap();
+    let relic_path = path.join(".relic");
 
-    // TODO : shorten and undry this
-    if let Some(r) = relic_path {
+    // TODO: shorten and undry this
+    // TODO: Rewrite this; i believe some logic here is flawed
+    if relic_path.exists() {
         match command_name {
             "clone" | "init" => {
                 // let this run only for
@@ -136,7 +139,7 @@ pub fn handle(command_handler: CommandHandler, args: ArgMatches, relic_path: Opt
             }
             _ => match command_handler.commands.get(command_name) {
                 Some(command) => {
-                    command(r, sub_matches);
+                    command(path, sub_matches);
                 }
                 None => {
                     unimplemented!("Relic Error, command not defined.");
@@ -150,7 +153,7 @@ pub fn handle(command_handler: CommandHandler, args: ArgMatches, relic_path: Opt
                 // clone, init
                 match command_handler.commands.get(command_name) {
                     Some(command) => {
-                        command(Path::new("."), sub_matches);
+                        command(path, sub_matches);
                     }
                     None => {
                         unimplemented!("Relic Error, command not defined.");
