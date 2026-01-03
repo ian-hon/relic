@@ -51,6 +51,8 @@ impl Commit {
 
         c.oid = oid_digest(&c.serialise()).into();
 
+        println!("NEW COMMIT : {}", c.oid.to_string());
+
         c.write(sanctum_path);
 
         c
@@ -189,96 +191,48 @@ impl Commit {
             return CommitState::Tie;
         }
 
-        let u_all = upstream.get_all_previous(sanctum_path);
-        let l_all = local.get_all_previous(sanctum_path);
+        let mut u_all = upstream.get_all_previous(sanctum_path);
+        let mut l_all = local.get_all_previous(sanctum_path);
+        // EXPENSIVE!
+        u_all.reverse();
+        l_all.reverse();
 
         let u_set: HashSet<[u8; 32]> = HashSet::from_iter(u_all.iter().map(|x| x.get_oid().0));
         let l_set: HashSet<[u8; 32]> = HashSet::from_iter(l_all.iter().map(|x| x.get_oid().0));
 
         if l_set.contains(&upstream.get_oid().0) {
-            return CommitState::Ahead;
+            if let Some((_, i)) = Commit::get_last_common(&u_all, &l_all) {
+                return CommitState::Ahead(l_all[(i + 1)..].to_vec());
+            }
+            panic!("no common found: Ahead");
         }
 
         if u_set.contains(&local.get_oid().0) {
-            return CommitState::Behind;
-        }
-
-        // can use binary search here to speed things up
-        for index in 0..(u_all.len().min(l_all.len())) {
-            if u_all[index].get_oid() == l_all[index].get_oid() {
-                return CommitState::Conflict(u_all[index].get_oid());
+            if let Some((_, i)) = Commit::get_last_common(&u_all, &l_all) {
+                return CommitState::Behind(u_all[(i + 1)..].to_vec());
             }
+            panic!("no common found: Behind");
         }
 
+        if let Some((c, _)) = Commit::get_last_common(&u_all, &l_all) {
+            return CommitState::Conflict(c.get_oid());
+        }
         CommitState::None
+    }
 
-        // if upstream.get_oid() == local.get_oid() {
-        //     return CommitState::Tie;
-        // }
+    fn get_last_common(a: &Vec<Commit>, b: &Vec<Commit>) -> Option<(Commit, usize)> {
+        // for a and b, oldest commit to newest commit
 
-        // let mut u_set: HashSet<[u8; 32]> = HashSet::new();
-        // let mut l_set: HashSet<[u8; 32]> = HashSet::new();
-
-        // u_set.insert(upstream.get_oid().0);
-        // l_set.insert(local.get_oid().0);
-
-        // // // if upstream != local and they dont have parents, its CommitState::None
-        // // let mut current_upstream = match upstream.get_parent(sanctum_path) {
-        // //     Some(u) => u,
-        // //     None => return CommitState::None,
-        // // };
-        // // let mut current_local = match local.get_parent(sanctum_path) {
-        // //     Some(l) => l,
-        // //     None => return CommitState::None,
-        // // };
-
-        // let mut current_upstream = upstream.clone();
-        // let mut current_local = local.clone();
-
-        // let mut upstream_reached_end = false;
-        // let mut local_reached_end = false;
-
-        // while !upstream_reached_end && !local_reached_end {
-        //     if !upstream_reached_end {
-        //         match current_upstream.get_parent(sanctum_path) {
-        //             Some(u) => {
-        //                 u_set.insert(u.get_oid().0);
-        //                 current_upstream = u;
-        //             }
-        //             None => upstream_reached_end = true,
-        //         };
-        //     }
-
-        //     if !local_reached_end {
-        //         match current_local.get_parent(sanctum_path) {
-        //             Some(l) => {
-        //                 l_set.insert(l.get_oid().0);
-        //                 current_local = l;
-        //             }
-        //             None => local_reached_end = true,
-        //         };
-        //     }
-
-        //     // check if current_upstream is inside l_set
-        //     // check if current_local is inside u_set
-        //     let u_found = l_set.contains(&current_upstream.get_oid().0);
-        //     let l_found = u_set.contains(&current_local.get_oid().0);
-
-        //     match (u_found, l_found) {
-        //         (false, false) => {
-        //             // do nothing and continue
-        //         }
-        //         (false, true) => {
-        //             return CommitState::Behind;
-        //         }
-        //         (true, false) => {
-        //             return CommitState::Ahead;
-        //         }
-        //         (true, true) => {}
-        //     }
-        // }
-
-        // CommitState::None
+        // TODO: test
+        // can use binary search here to speed things up
+        let mut previous = None;
+        for index in 0..(a.len().min(b.len())) {
+            if a[index].get_oid() != b[index].get_oid() {
+                return previous;
+            }
+            previous = Some((a[index].clone(), index));
+        }
+        previous
     }
     // #endregion
 }
@@ -301,15 +255,19 @@ impl ObjectLike for Commit {
 
 #[derive(Debug)]
 pub enum CommitState {
-    Ahead, // local has commits that upstream doesnt
+    Ahead(Vec<Commit>), // local has commits that upstream doesnt
     /*
     Upstream: A > B > C
     Local   : A > B > C > D > E
+
+    Value stored in the Vec (in order): [D, E]
     */
-    Behind, // upstream has commits that local doesnt
+    Behind(Vec<Commit>), // upstream has commits that local doesnt
     /*
     Upstream: A > B > C > D > E
     Local   : A > B > C
+
+    Value stored in the Vec (in order): [D, E]
      */
     Tie, // both are equal
     /*

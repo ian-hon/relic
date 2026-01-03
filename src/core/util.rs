@@ -1,5 +1,6 @@
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use chrono::{DateTime, Utc};
 use sha2::{Digest, Sha256};
 use urlencoding::{decode, encode};
 
@@ -55,4 +56,11 @@ pub fn get_time() -> u64 {
         .duration_since(UNIX_EPOCH)
         .expect("time went backwards (???)")
         .as_millis() as u64
+}
+
+pub fn into_human_readable(t: u64) -> String {
+    // accepts unix time, but only in milliseconds format
+    DateTime::<Utc>::from(UNIX_EPOCH + Duration::from_millis(t as u64))
+        .format("%Y-%m-%d %H:%M:%S")
+        .to_string()
 }

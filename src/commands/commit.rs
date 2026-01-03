@@ -49,17 +49,17 @@ pub fn commit(path: &Path, relic_path: &Path, args: &ArgMatches) {
 
     // upstream
     // 65c8ea5db9c106aa702fb33cc1a631ae82881ed6db120e5abf5ae29172a14fc8
-    // 54789394f94057b6d2a362fee4f61152c3864ee008930b279901b6e06471c327
-    // a2454c23c117a4411463518c40a85188314f982552d44a3d33755ab9823660d6 <
-    // 233f377dc5c2e7cde403a58c4f906cf348f8e17f14dd9a602e122ace34978b58
-    // b565162264c6be6be2e62918cc67022ffd49f4953511dca56a4687714f20bf97
+    // 022993d2ac22def1a5762d48d3c720f1a759db7b513f57b9f8dbd7c787edec5b
+    // 30dfa7f84678f0fa126df059eb6ae55ec78fc4ac9340090c710bc0a52b5a4b1d <
+    // dd29cfecbd3a03386acc3755ec6a2c259f6275c94f262d04041dbbd58c366663
+    // 2acbbd187411c766cad84124a427d48b8a50be5c47146e106790c514f2251d77
 
     // local
     // 65c8ea5db9c106aa702fb33cc1a631ae82881ed6db120e5abf5ae29172a14fc8
-    // 54789394f94057b6d2a362fee4f61152c3864ee008930b279901b6e06471c327
-    // a2454c23c117a4411463518c40a85188314f982552d44a3d33755ab9823660d6 <
-    // 56d450fe16b5cadbe925b29903963e99fdc4768d9b90521b5d1dd9bb871e12f6
-    // 3ff716050b04ab3a7dd4575d0f436018ad03df6718f0c57a52cd15f039069454
+    // 022993d2ac22def1a5762d48d3c720f1a759db7b513f57b9f8dbd7c787edec5b
+    // 30dfa7f84678f0fa126df059eb6ae55ec78fc4ac9340090c710bc0a52b5a4b1d <
+    // 759a2e5bab337ee627fd9c5fab0c4df88e5c1b188de52970a6c653928a0e1545
+    // a32fe740a1f9d85e3e7120f43548ec9876a2d60c17368ea4ef7fc213b6269bd2
 
     // update local head only
     match state::fetch_head(relic_path) {
@@ -67,10 +67,10 @@ pub fn commit(path: &Path, relic_path: &Path, args: &ArgMatches) {
             if let Some(head) = head {
                 // use head as parent
 
-                if head.tree == tree.get_oid() {
-                    println!("no changes to commit");
-                    return;
-                }
+                // if head.tree == tree.get_oid() {
+                //     println!("no changes to commit");
+                //     return;
+                // }
 
                 let c = Commit::new(
                     tree.get_oid(),

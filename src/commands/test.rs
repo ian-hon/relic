@@ -36,50 +36,52 @@ pub fn test(path: &Path, relic_path: &Path, _: &ArgMatches) {
     // println!("{}\n\n{}", c.serialise(), c.get_oid().to_string());
 
     // upstream:
-    // 0a5d78505b7904241133c6a06ac130cc4dc5f8f378177970c3cd5f000f81ad02 A
-    // cf3e6c3bfc28b2c1e4cecf2e46e4cb916ac8e0b0a424fb671a85fa418f4cf1cd B
-    // ce67cbf919340f60d484304afa8b0f9011c505b4528986f8826e8bd349562aaa C
-    // 5df883ee243ad58ae593a55deca45985681d7de9fbc5455cae455f2d672974ee D +
-    // 792132629d1c33eda2c171408f6cadf7328f1ffa43355a797400ab77046b716c E +
+    // 9752336e563af7b50b0063e60b8ca6f2a434fb8f8051534757d82df7d8411510 A
+    // d97ae6d1de0111a4efdd10404c2e7733fbc377f085d8980f5d0f1f9779f7c09b B
+    // fc2b9e12232e98ac6f069a6ec8797a8c719718f9d5dd6b6ba053a2ef9d79a8e4 C
+    // 7968589d1461e55157fad1c76791a0efd0c913af4a2868259c951907ce75635f D +
+    // b496157b71b466bbc383628575f80df9125ad791bdeb96d88047e0a7271eaf2c E +
 
     // local
-    // 0a5d78505b7904241133c6a06ac130cc4dc5f8f378177970c3cd5f000f81ad02 A
-    // cf3e6c3bfc28b2c1e4cecf2e46e4cb916ac8e0b0a424fb671a85fa418f4cf1cd B
-    // ce67cbf919340f60d484304afa8b0f9011c505b4528986f8826e8bd349562aaa C
-    // 0af3ee59e2fc28a72f9fd8ae62f3f9ef1faf28e6338290ddf2473b132fa0f541 F +
-    // e70dc52f20550140dd4ad5b4d65a50daa34260d75e0bdcd0316a62238b907025 G +
+    // 9752336e563af7b50b0063e60b8ca6f2a434fb8f8051534757d82df7d8411510 A
+    // d97ae6d1de0111a4efdd10404c2e7733fbc377f085d8980f5d0f1f9779f7c09b B
+    // fc2b9e12232e98ac6f069a6ec8797a8c719718f9d5dd6b6ba053a2ef9d79a8e4 C
+    // a93ba7256c3e68352a420092592dd45a704c401deab3dd9ed870d70d3cc8c17a F +
+    // 8b2e7aecdabfe9746c1292280fe297e27282dd5dd43c3f49285318defde21058 G +
 
-    println!(
-        "{:?}",
-        match Commit::get_state(
-            match ObjectID::from_string(
-                "3ff716050b04ab3a7dd4575d0f436018ad03df6718f0c57a52cd15f039069454"
-            )
-            .construct(&sanctum_path)
-            {
-                Ok(r) => match r {
-                    Object::Commit(c) => c,
-                    _ => panic!("1"),
-                },
-                _ => panic!("2"),
+    match Commit::get_state(
+        match ObjectID::from_string(
+            "b496157b71b466bbc383628575f80df9125ad791bdeb96d88047e0a7271eaf2c",
+        )
+        .construct(&sanctum_path)
+        {
+            Ok(r) => match r {
+                Object::Commit(c) => c,
+                _ => panic!("1"),
             },
-            match ObjectID::from_string(
-                "b565162264c6be6be2e62918cc67022ffd49f4953511dca56a4687714f20bf97"
-            )
-            .construct(&sanctum_path)
-            {
-                Ok(r) => match r {
-                    Object::Commit(c) => c,
-                    _ => panic!("3"),
-                },
-                _ => panic!("4"),
+            _ => panic!("2"),
+        },
+        match ObjectID::from_string(
+            "8b2e7aecdabfe9746c1292280fe297e27282dd5dd43c3f49285318defde21058",
+        )
+        .construct(&sanctum_path)
+        {
+            Ok(r) => match r {
+                Object::Commit(c) => c,
+                _ => panic!("3"),
             },
-            &sanctum_path
-        ) {
-            CommitState::Conflict(l) => l.to_string(),
-            i => format!("{i:?}"),
+            _ => panic!("4"),
+        },
+        &sanctum_path,
+    ) {
+        CommitState::Conflict(l) => println!("{}", l.to_string()),
+        CommitState::Ahead(l) | CommitState::Behind(l) => {
+            for i in l {
+                println!("OID: {}", i.get_oid().to_string());
+            }
         }
-    );
+        i => println!("{i:?}"),
+    }
 
     // let c = match ObjectID::from_string(
     //     "d6ec2763bee6e67ec489bf7edcc08678c94c9d9b40d37dcecf88d681ba204336",
