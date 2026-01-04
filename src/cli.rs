@@ -3,13 +3,10 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::commands as command_module;
+use crate::{commands as command_module, core::state::State};
 use clap::{arg, value_parser, ArgMatches, Command};
 
-// &Path holds the path where this is run
-// &Path holds the .relic directory
-// &ArgMatches holds the command's arguments
-pub type CommandType = fn(&Path, &Path, &ArgMatches);
+pub type CommandType = fn(Option<State>, &ArgMatches);
 
 pub struct CommandHandler {
     commands: HashMap<String, CommandType>,
@@ -126,11 +123,11 @@ naively reinvent the wheel."#,
 
 pub fn handle(command_handler: CommandHandler, args: ArgMatches, path: &Path) {
     let (command_name, sub_matches) = args.subcommand().unwrap();
-    let relic_path = path.join(".relic");
+    // let relic_path = path.join(".relic");
 
     // TODO: shorten and undry this
     // TODO: Rewrite this; i believe some logic here is flawed
-    if relic_path.exists() {
+    if let Some(state) = State::construct(path.into()) {
         match command_name {
             "clone" | "init" => {
                 // let this run only for
@@ -140,7 +137,7 @@ pub fn handle(command_handler: CommandHandler, args: ArgMatches, path: &Path) {
             }
             _ => match command_handler.commands.get(command_name) {
                 Some(command) => {
-                    command(path, &relic_path, sub_matches);
+                    command(Some(state), sub_matches);
                 }
                 None => {
                     unimplemented!("Relic Error, command not defined.");
@@ -154,7 +151,7 @@ pub fn handle(command_handler: CommandHandler, args: ArgMatches, path: &Path) {
                 // clone, init
                 match command_handler.commands.get(command_name) {
                     Some(command) => {
-                        command(path, &relic_path, sub_matches);
+                        command(None, sub_matches);
                     }
                     None => {
                         unimplemented!("Relic Error, command not defined.");

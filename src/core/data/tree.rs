@@ -78,7 +78,11 @@ impl Tree {
     }
 
     // walks this path and constructs a Tree object from it
-    pub fn build_tree(root_path: &Path, sanctum_path: &Path) -> Result<Tree, RelicError> {
+    pub fn build_tree(
+        root_path: &Path,
+        sanctum_path: &Path,
+        relative_path: &Path,
+    ) -> Result<Tree, RelicError> {
         let paths = match fs::read_dir(root_path) {
             Ok(r) => r,
             Err(e) => {
@@ -127,7 +131,11 @@ impl Tree {
                             continue;
                         }
 
-                        match Tree::build_tree(&file_path, sanctum_path) {
+                        match Tree::build_tree(
+                            &file_path,
+                            sanctum_path,
+                            &relative_path.join(&file_name),
+                        ) {
                             Ok(t) => children.push(TreeEntry {
                                 oid: t.get_oid(),
                                 name: file_name,

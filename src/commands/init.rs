@@ -1,5 +1,5 @@
-use std::path::Path;
-
 use clap::ArgMatches;
 
-pub fn init(_: &Path, _: &Path, _: &ArgMatches) {}
+use crate::core::state::State;
+
+pub fn init(_: Option<State>, _: &ArgMatches) {}

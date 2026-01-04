@@ -1,5 +1,4 @@
-use std::path::Path;
-
+use crate::core::state::State;
 use clap::ArgMatches;
 
-pub fn tree(_: &Path, _: &Path, _: &ArgMatches) {}
+pub fn tree(_: Option<State>, _: &ArgMatches) {}

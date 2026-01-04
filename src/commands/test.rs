@@ -1,19 +1,18 @@
-use std::path::Path;
-
 use clap::ArgMatches;
 
 use crate::core::{
     data::commit::{Commit, CommitState},
     object::{Object, ObjectLike},
     oid::ObjectID,
+    state::State,
 };
 
-pub fn test(_: &Path, relic_path: &Path, _: &ArgMatches) {
+pub fn test(state: Option<State>, _: &ArgMatches) {
+    let Some(state) = state else { return };
+
     // if let Ok(s) = Tree::build_tree(path, &path.join(".relic/sanctum")) {
     //     println!("{}", s.get_oid().to_string());
     // }
-
-    let sanctum_path = relic_path.join("sanctum");
 
     // tree: fcd55f8ce8996546d9a9001bddae06c6800f92f5015943535a7bf6980c0e9600
     // let c = Commit::new(
@@ -49,9 +48,9 @@ pub fn test(_: &Path, relic_path: &Path, _: &ArgMatches) {
 
     match Commit::get_state(
         match ObjectID::from_string(
-            "11783f50520096f9e60e40fbaee474a0a9f715f8d2e496dfb4c240058f1b8223",
+            "568ebafd5e7a3046e3c184d29cc953a3afcaf8d5694d1982e0c6029a8710a0d0",
         )
-        .construct(&sanctum_path)
+        .construct(&state.get_sanctum_path())
         {
             Ok(r) => match r {
                 Object::Commit(c) => c,
@@ -60,9 +59,9 @@ pub fn test(_: &Path, relic_path: &Path, _: &ArgMatches) {
             _ => panic!("2"),
         },
         match ObjectID::from_string(
-            "8b2e7aecdabfe9746c1292280fe297e27282dd5dd43c3f49285318defde21058",
+            "d97ae6d1de0111a4efdd10404c2e7733fbc377f085d8980f5d0f1f9779f7c09b",
         )
-        .construct(&sanctum_path)
+        .construct(&state.get_sanctum_path())
         {
             Ok(r) => match r {
                 Object::Commit(c) => c,
@@ -70,9 +69,9 @@ pub fn test(_: &Path, relic_path: &Path, _: &ArgMatches) {
             },
             _ => panic!("4"),
         },
-        &sanctum_path,
+        &state.get_sanctum_path(),
     ) {
-        CommitState::Conflict(l) => println!("{}", l.as_string()),
+        CommitState::Conflict(l) => println!("luca: {}", l.get_oid().to_string()),
         CommitState::Ahead(l) | CommitState::Behind(l) => {
             for i in l {
                 println!("OID: {}", i.get_oid().to_string());
