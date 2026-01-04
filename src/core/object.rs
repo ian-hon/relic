@@ -72,6 +72,7 @@ impl Object {
 
 pub trait ObjectLike {
     fn get_oid(&self) -> ObjectID;
+    #[allow(unused)]
     fn as_string(&self) -> String;
     fn serialise(&self) -> String;
     fn write(&self, sanctum_path: &Path) -> Option<RelicError> {

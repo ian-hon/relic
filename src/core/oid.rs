@@ -6,7 +6,7 @@ use std::{
 use crate::core::{
     data::{blob::Blob, commit::Commit, tree::Tree},
     error::{IOError, RelicError, SanctumError},
-    object::{Object, ObjectLike, ObjectType},
+    object::{Object, ObjectType},
     util::{empty_oid, oid_to_string, string_to_oid},
 };
 

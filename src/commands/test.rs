@@ -3,16 +3,12 @@ use std::path::Path;
 use clap::ArgMatches;
 
 use crate::core::{
-    data::{
-        commit::{Commit, CommitState},
-        tree::Tree,
-    },
+    data::commit::{Commit, CommitState},
     object::{Object, ObjectLike},
     oid::ObjectID,
-    util::{get_time, string_to_oid},
 };
 
-pub fn test(path: &Path, relic_path: &Path, _: &ArgMatches) {
+pub fn test(_: &Path, relic_path: &Path, _: &ArgMatches) {
     // if let Ok(s) = Tree::build_tree(path, &path.join(".relic/sanctum")) {
     //     println!("{}", s.get_oid().to_string());
     // }

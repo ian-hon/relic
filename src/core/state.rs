@@ -3,7 +3,7 @@ use std::{fs, path::Path};
 use crate::core::{
     data::commit::Commit,
     error::{IOError, RelicError, SanctumError},
-    object::{Object, ObjectLike},
+    object::Object,
     oid::ObjectID,
     util::string_to_oid,
 };

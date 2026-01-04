@@ -7,7 +7,7 @@ use crate::core::{
     state::{fetch_head, fetch_upstream},
 };
 
-pub fn status(path: &Path, relic_path: &Path, _: &ArgMatches) {
+pub fn status(_: &Path, relic_path: &Path, _: &ArgMatches) {
     let sanctum_path = relic_path.join("sanctum");
     if !sanctum_path.exists() {
         println!("sanctum doesnt exist. is your relic configuration corrupted?");
