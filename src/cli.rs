@@ -6,7 +6,7 @@ use std::{
 use crate::{commands as command_module, core::state::State};
 use clap::{arg, value_parser, ArgMatches, Command};
 
-pub type CommandType = fn(Option<State>, &ArgMatches);
+pub type CommandType = fn(Option<&mut State>, &ArgMatches);
 
 pub struct CommandHandler {
     commands: HashMap<String, CommandType>,
@@ -52,10 +52,10 @@ naively reinvent the wheel."#,
         (
             command_module::track,
             Command::new("track")
-                .about("Adds file(s) to be tracked")
+                .about("Adds paths to be tracked")
                 .arg_required_else_help(true)
                 .arg(
-                    arg!([FILE]... "File(s) to track (* for all)")
+                    arg!([PATHS]... "Paths to track (* for all)")
                         .required(true)
                         .value_parser(value_parser!(PathBuf)),
                 ),
@@ -63,10 +63,10 @@ naively reinvent the wheel."#,
         (
             command_module::untrack,
             Command::new("untrack")
-                .about("Removes file(s) from being tracked")
+                .about("Removes paths from being tracked")
                 .arg_required_else_help(true)
                 .arg(
-                    arg!([FILE]... "File(s) to untrack (* for all)")
+                    arg!([PATHS]... "Paths to untrack (* for all)")
                         .required(true)
                         .value_parser(value_parser!(PathBuf)),
                 ),
@@ -127,7 +127,7 @@ pub fn handle(command_handler: CommandHandler, args: ArgMatches, path: &Path) {
 
     // TODO: shorten and undry this
     // TODO: Rewrite this; i believe some logic here is flawed
-    if let Some(state) = State::construct(path.into()) {
+    if let Some(mut state) = State::construct(path.into()) {
         match command_name {
             "clone" | "init" => {
                 // let this run only for
@@ -137,7 +137,7 @@ pub fn handle(command_handler: CommandHandler, args: ArgMatches, path: &Path) {
             }
             _ => match command_handler.commands.get(command_name) {
                 Some(command) => {
-                    command(Some(state), sub_matches);
+                    command(Some(&mut state), sub_matches);
                 }
                 None => {
                     unimplemented!("Relic Error, command not defined.");

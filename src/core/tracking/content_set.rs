@@ -1,11 +1,21 @@
-use std::{collections::HashSet, fs, path::Path};
+use std::{
+    collections::HashSet,
+    fs,
+    path::{Path, PathBuf},
+};
 
 use crate::core::error::{IOError, RelicError};
 
-pub struct ContentSet(HashSet<String>);
+pub struct ContentSet {
+    pub files: HashSet<String>,
+    pub directories: HashSet<String>,
+}
 impl ContentSet {
     pub fn new() -> ContentSet {
-        ContentSet(HashSet::new())
+        ContentSet {
+            files: HashSet::new(),
+            directories: HashSet::new(),
+        }
     }
 
     pub fn construct(path: &Path) -> Result<ContentSet, RelicError> {
@@ -26,19 +36,74 @@ impl ContentSet {
     }
 
     pub fn serialise(&self) -> String {
-        "".to_string()
+        format!(
+            "{}\n\n{}",
+            self.directories
+                .iter()
+                .fold("".to_string(), |mut left, right| {
+                    left.push_str(&right[2..]);
+                    // left.push_str(right);
+                    left.push_str("/\n");
+                    left
+                })
+                .trim_end()
+                .to_string(),
+            self.files
+                .iter()
+                .fold("".to_string(), |mut left, right| {
+                    left.push_str(&right[2..]);
+                    // left.push_str(right);
+                    left.push_str("\n");
+                    left
+                })
+                .trim_end()
+                .to_string()
+        )
     }
 
     pub fn deserialise(payload: String) -> ContentSet {
-        let mut result = HashSet::new();
+        let mut files = HashSet::new();
+        let mut directories = HashSet::new();
 
         for line in payload.lines() {
-            if line.starts_with("--") {
+            if line.starts_with("--") || line.is_empty() {
                 continue;
             }
-            result.insert(line.to_string());
+
+            if line.ends_with("/") {
+                let l = line.len() - 1;
+                directories.insert(format!("./{}", line[..l].to_owned()));
+            } else {
+                files.insert(format!("./{line}"));
+            }
         }
 
-        ContentSet(result)
+        ContentSet { files, directories }
+    }
+
+    pub fn append(&mut self, paths: Vec<PathBuf>) {
+        for i in paths {
+            let r: String = i.to_string_lossy().into();
+
+            if i.is_file() {
+                self.files.insert(format!("./{r}"));
+            } else {
+                self.directories.insert(format!("./{r}"));
+            }
+        }
+    }
+
+    pub fn remove(&mut self, paths: Vec<PathBuf>) {
+        for i in paths {
+            let r: String = i.to_string_lossy().into();
+
+            if i.is_file() {
+                // self.files.insert(format!("./{r}"));
+                self.files.remove(&format!("./{r}"));
+            } else {
+                self.directories.remove(&format!("./{r}"));
+                // self.directories.insert(format!("./{r}"));
+            }
+        }
     }
 }

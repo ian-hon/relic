@@ -5,7 +5,7 @@ use crate::core::{
     state::State,
 };
 
-pub fn status(state: Option<State>, _: &ArgMatches) {
+pub fn status(state: Option<&mut State>, _: &ArgMatches) {
     let Some(state) = state else { return };
 
     // compare head and upstream

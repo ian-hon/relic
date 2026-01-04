@@ -4,6 +4,7 @@ use std::{fs, path::Path};
 use crate::core::error::IOError;
 use crate::core::object::{ObjectLike, ObjectType};
 use crate::core::oid::ObjectID;
+use crate::core::state::State;
 use crate::core::util::{empty_oid, oid_digest, string_to_oid};
 use crate::core::{data::blob::Blob, error::RelicError};
 
@@ -79,6 +80,7 @@ impl Tree {
 
     // walks this path and constructs a Tree object from it
     pub fn build_tree(
+        state: &State,
         root_path: &Path,
         sanctum_path: &Path,
         relative_path: &Path,
@@ -101,9 +103,22 @@ impl Tree {
                     let file_name = p.file_name().into_string().unwrap();
                     let file_path = p.path();
 
-                    println!("{file_path:?}");
+                    let relative =
+                        Into::<String>::into(relative_path.join(&file_name).to_string_lossy());
 
                     if file_type.is_file() {
+                        // logically speaking, only files in root will be tracked
+                        // everything inside a directory will be tracked by that directory
+                        if (relative_path == Path::new("."))
+                            && (!state.tracking_set.files.contains(&relative))
+                        {
+                            continue;
+                        }
+
+                        if state.ignore_set.files.contains(&relative) {
+                            continue;
+                        }
+
                         match Blob::build_blob(&file_path, sanctum_path) {
                             Ok(b) => {
                                 children.push(TreeEntry {
@@ -115,11 +130,11 @@ impl Tree {
                             Err(e) => return Err(e),
                         }
                     } else if file_type.is_dir() {
-                        if file_name.eq("target") {
+                        if !state.tracking_set.directories.contains(&relative) {
                             continue;
                         }
 
-                        if file_name.eq(".git") {
+                        if state.ignore_set.directories.contains(&relative) {
                             continue;
                         }
 
@@ -127,11 +142,8 @@ impl Tree {
                             continue;
                         }
 
-                        if file_name.eq("src") {
-                            continue;
-                        }
-
                         match Tree::build_tree(
+                            state,
                             &file_path,
                             sanctum_path,
                             &relative_path.join(&file_name),

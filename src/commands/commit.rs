@@ -10,7 +10,7 @@ use crate::core::{
     util::get_time,
 };
 
-pub fn commit(state: Option<State>, args: &ArgMatches) {
+pub fn commit(state: Option<&mut State>, args: &ArgMatches) {
     let Some(state) = state else { return };
 
     let message = args.get_one::<String>("message").unwrap().clone();
@@ -18,7 +18,12 @@ pub fn commit(state: Option<State>, args: &ArgMatches) {
         .get_one::<String>("description")
         .map_or("".to_string(), String::clone);
 
-    let tree = match Tree::build_tree(&state.root_path, &state.get_sanctum_path(), Path::new(".")) {
+    let tree = match Tree::build_tree(
+        &state,
+        &state.root_path,
+        &state.get_sanctum_path(),
+        Path::new("."),
+    ) {
         Ok(t) => t,
         Err(e) => {
             println!(

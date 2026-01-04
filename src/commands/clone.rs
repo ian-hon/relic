@@ -2,4 +2,4 @@ use clap::ArgMatches;
 
 use crate::core::state::State;
 
-pub fn clone(_: Option<State>, _: &ArgMatches) {}
+pub fn clone(_: Option<&mut State>, _: &ArgMatches) {}

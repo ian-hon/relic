@@ -68,6 +68,13 @@ impl State {
         self.fetch_from_commit_file(self.get_upstream_path())
     }
 
+    pub fn update_tracking_set(&self) {
+        let _ = fs::write(
+            self.relic_path.join("tracked"),
+            self.tracking_set.serialise(),
+        );
+    }
+
     // #region paths
     pub fn get_sanctum_path(&self) -> PathBuf {
         let s = self.relic_path.join("sanctum");
