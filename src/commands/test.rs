@@ -41,17 +41,19 @@ pub fn test(path: &Path, relic_path: &Path, _: &ArgMatches) {
     // fc2b9e12232e98ac6f069a6ec8797a8c719718f9d5dd6b6ba053a2ef9d79a8e4 C
     // 7968589d1461e55157fad1c76791a0efd0c913af4a2868259c951907ce75635f D +
     // b496157b71b466bbc383628575f80df9125ad791bdeb96d88047e0a7271eaf2c E +
+    // 11783f50520096f9e60e40fbaee474a0a9f715f8d2e496dfb4c240058f1b8223 F +
+    // 568ebafd5e7a3046e3c184d29cc953a3afcaf8d5694d1982e0c6029a8710a0d0 G +
 
     // local
     // 9752336e563af7b50b0063e60b8ca6f2a434fb8f8051534757d82df7d8411510 A
     // d97ae6d1de0111a4efdd10404c2e7733fbc377f085d8980f5d0f1f9779f7c09b B
     // fc2b9e12232e98ac6f069a6ec8797a8c719718f9d5dd6b6ba053a2ef9d79a8e4 C
-    // a93ba7256c3e68352a420092592dd45a704c401deab3dd9ed870d70d3cc8c17a F +
-    // 8b2e7aecdabfe9746c1292280fe297e27282dd5dd43c3f49285318defde21058 G +
+    // a93ba7256c3e68352a420092592dd45a704c401deab3dd9ed870d70d3cc8c17a H +
+    // 8b2e7aecdabfe9746c1292280fe297e27282dd5dd43c3f49285318defde21058 I +
 
     match Commit::get_state(
         match ObjectID::from_string(
-            "b496157b71b466bbc383628575f80df9125ad791bdeb96d88047e0a7271eaf2c",
+            "11783f50520096f9e60e40fbaee474a0a9f715f8d2e496dfb4c240058f1b8223",
         )
         .construct(&sanctum_path)
         {
@@ -74,7 +76,7 @@ pub fn test(path: &Path, relic_path: &Path, _: &ArgMatches) {
         },
         &sanctum_path,
     ) {
-        CommitState::Conflict(l) => println!("{}", l.to_string()),
+        CommitState::Conflict(l) => println!("{}", l.as_string()),
         CommitState::Ahead(l) | CommitState::Behind(l) => {
             for i in l {
                 println!("OID: {}", i.get_oid().to_string());

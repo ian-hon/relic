@@ -3,7 +3,7 @@ use std::{collections::HashSet, path::Path};
 use crate::core::{
     object::{Object, ObjectLike},
     oid::ObjectID,
-    util::{empty_oid, oid_digest, string_to_oid, url_decode, url_encode},
+    util::{empty_oid, into_human_readable, oid_digest, string_to_oid, url_decode, url_encode},
 };
 
 /*
@@ -17,6 +17,7 @@ description
 */
 
 const DELIMITER: &str = "C\0";
+const MESSAGE_TRUNC_LENGTH: usize = 40;
 
 #[derive(Debug, Clone)]
 pub struct Commit {
@@ -80,6 +81,38 @@ impl Commit {
             self.author,
             url_encode(&self.message),
             url_encode(&self.description)
+        )
+    }
+
+    pub fn get_message_trunc(&self, padding: bool) -> String {
+        // truncation
+        // "lorem ipsum dolor sit a..."
+        //  |--MESSAGE_TRUNC_LENGTH--|
+
+        // padding = false
+        // "lorem ipsum"
+
+        // padding = true
+        // "lorem ipsum         "
+
+        let s = if self.message.len() <= MESSAGE_TRUNC_LENGTH {
+            self.message.clone()
+        } else {
+            format!("{}...", &self.message[..(MESSAGE_TRUNC_LENGTH - 3)])
+        };
+        if padding {
+            format!("{:<MESSAGE_TRUNC_LENGTH$}", s)
+        } else {
+            format!("{s}")
+        }
+    }
+
+    pub fn get_nickname(&self) -> String {
+        format!(
+            "{} {} {}",
+            self.get_oid().as_trunc(),
+            self.get_message_trunc(true),
+            into_human_readable(self.timestamp)
         )
     }
 
@@ -215,7 +248,7 @@ impl Commit {
         }
 
         if let Some((c, _)) = Commit::get_last_common(&u_all, &l_all) {
-            return CommitState::Conflict(c.get_oid());
+            return CommitState::Conflict(c.clone());
         }
         CommitState::None
     }
@@ -274,7 +307,7 @@ pub enum CommitState {
     Upstream: A > B > C
     Local   : A > B > C
      */
-    Conflict(ObjectID), // upstream and local have conflicting commits
+    Conflict(Commit), // upstream and local have conflicting commits
     // Conflict({last common commit})
     /*
     Upstream: A > B > C > D > E

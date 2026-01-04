@@ -62,17 +62,17 @@ impl ObjectID {
                         ObjectType::Blob => {
                             let b = Blob::deserialise(payload);
 
-                            println!("Blob\n\n{:?}", b.serialise());
+                            // println!("Blob\n\n{:?}", b.serialise());
 
                             return Ok(Object::Blob(b));
                         }
                         ObjectType::Tree => {
                             if let Some(t) = Tree::deserialise(payload) {
-                                println!("Tree\n\n{:?}", t.serialise());
+                                // println!("Tree\n\n{:?}", t.serialise());
 
                                 return Ok(Object::Tree(t));
                             }
-                            println!("deserialise failed");
+                            // println!("deserialise failed");
                             return Err(RelicError::ConfigurationIncorrect);
                         }
                         ObjectType::Commit => {
@@ -82,7 +82,7 @@ impl ObjectID {
                                 return Ok(Object::Commit(c));
                             }
 
-                            println!("commit deserialise failed");
+                            // println!("commit deserialise failed");
                             return Err(RelicError::ConfigurationIncorrect);
                         }
                     }
@@ -113,6 +113,10 @@ impl ObjectID {
         }
 
         Err(RelicError::SanctumError(SanctumError::RecordNoExist))
+    }
+
+    pub fn as_trunc(&self) -> String {
+        (&self.to_string()[..6]).to_string().to_owned()
     }
 }
 

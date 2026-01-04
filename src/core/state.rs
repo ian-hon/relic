@@ -28,11 +28,11 @@ fn fetch_from_commit_file(path: &Path, sanctum_path: &Path) -> Result<Option<Com
             Ok(c) => {
                 return match c {
                     Object::Commit(c) => {
-                        println!("{}\n{}", c.get_oid().to_string(), c.serialise());
+                        // println!("{}\n{}", c.get_oid().to_string(), c.serialise());
                         Ok(Some(c))
                     }
                     _ => Err(RelicError::ConfigurationIncorrect),
-                }
+                };
             }
             Err(_) => return Err(RelicError::ConfigurationIncorrect),
         }
