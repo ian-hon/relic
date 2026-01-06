@@ -141,17 +141,12 @@ description {}",
     }
 
     pub fn deserialise(payload: Vec<u8>) -> Option<Commit> {
-        // TODO: test
-
         // takes payload and deserialises into Option<Commit>
         let payload = Object::extract_body(&payload)?; // remove the header
         let payload = str::from_utf8(&payload).unwrap();
 
         let pairs = parse_kv_pair(payload, " ");
 
-        println!("pairs: {pairs:?}");
-
-        // TODO: test these [0]s
         let tree = ObjectID::from_string(&pairs.get("tree")?[0]);
         let parents = pairs
             .get("parent")?
@@ -164,9 +159,13 @@ description {}",
         };
         // EXPENSIVE!
         let author = pairs.get("author")?[0].clone();
-        let message = pairs.get("message")?[0].clone();
+        let message = if let Some(m) = pairs.get("message") {
+            url_decode(&m[0])
+        } else {
+            "".to_string()
+        };
         let description = if let Some(d) = pairs.get("description") {
-            d[0].to_string()
+            url_decode(&d[0])
         } else {
             "".to_string()
         };
@@ -229,15 +228,11 @@ description {}",
         result
     }
 
-    pub fn get_state(upstream: Commit, local: Commit, sanctum_path: &Path) -> CommitState {
-        // dfs?
-        // keep hashset of both commit's ids
-        // upstream's hashset & local's hashset
-        // traverse downwards from upstream and local once
-        //  if hashset contains, then yada yada logic
-        //  else append commit id to respective hashset
+    pub fn get_surrogate_parents(&self) -> Vec<ObjectID> {
+        self.parents[1..].iter().map(|x| x.clone()).collect()
+    }
 
-        // wrong logic
+    pub fn get_state(upstream: Commit, local: Commit, sanctum_path: &Path) -> CommitState {
         // only care about HEAD
         // if l.head is inside u_set => Behind
         // if u.head is inside l_set => Ahead
@@ -249,6 +244,17 @@ description {}",
             // check:
             // u.parents contain l.oid
             // l.parents contain u.oid
+
+            return CommitState::Tie;
+        }
+
+        // TODO: test
+        // for merge commits
+        if upstream.get_surrogate_parents().contains(&local.get_oid()) {
+            return CommitState::Tie;
+        }
+
+        if local.get_surrogate_parents().contains(&upstream.get_oid()) {
             return CommitState::Tie;
         }
 
