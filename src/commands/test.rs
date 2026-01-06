@@ -1,8 +1,15 @@
-use std::path::Path;
+use std::{io::empty, path::Path};
 
 use clap::ArgMatches;
 
-use crate::core::{data::tree::Tree, state::State, tracking::content_set::ContentSet};
+use crate::core::{
+    data::{commit::Commit, tree::Tree},
+    object::{Object, ObjectLike},
+    oid::ObjectID,
+    state::State,
+    tracking::content_set::ContentSet,
+    util::{empty_oid, oid_digest},
+};
 
 pub fn test(state: Option<&mut State>, _: &ArgMatches) {
     let Some(state) = state else { return };
@@ -66,6 +73,34 @@ pub fn test(state: Option<&mut State>, _: &ArgMatches) {
     //     Path::new("."),
     // );
 
-    let c = ContentSet::deserialise("lorem".to_string());
-    println!("{}", c.serialise());
+    // let c = ContentSet::deserialise("lorem".to_string());
+    // println!("{}", c.serialise());
+
+    // println!("{:?}", state.fetch_head());
+
+    // println!(
+    //     "{:?}",
+    //     Commit::new(
+    //         empty_oid().into(),
+    //         vec![oid_digest("ipsum").into(), oid_digest("lorem").into()],
+    //         0,
+    //         "huh".to_string(),
+    //         "huh".to_string(),
+    //         "huh".to_string(),
+    //         &state.get_sanctum_path()
+    //     )
+    // );
+
+    println!(
+        "{}",
+        match ObjectID::from_string(
+            "21f43ba6330e359211a4e802bb91869d0b6ae6fb2199fcba50d1a45d760be289"
+        )
+        .construct(&state.get_sanctum_path())
+        .unwrap()
+        {
+            Object::Commit(c) => c.serialise(),
+            _ => panic!(),
+        }
+    );
 }

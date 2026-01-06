@@ -1,4 +1,7 @@
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::{
+    collections::HashMap,
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
 
 use chrono::{DateTime, Utc};
 use sha2::{Digest, Sha256};
@@ -41,13 +44,48 @@ pub fn oid_digest_data(content: &Vec<u8>) -> [u8; 32] {
 }
 // #endregion
 
-// #region url encoding
+// #region encoding
 pub fn url_encode(s: &str) -> String {
     encode(s).into_owned()
 }
 
 pub fn url_decode(s: &str) -> String {
     decode(s).unwrap().into_owned()
+}
+
+pub fn parse_kv_pair(s: &str, sep: &str) -> HashMap<String, Vec<String>> {
+    // TODO: test
+
+    let mut result: HashMap<String, Vec<String>> = HashMap::new();
+
+    for line in s.lines() {
+        let l = line.split(sep).collect::<Vec<&str>>();
+        if l.len() < 2 {
+            continue;
+        }
+        let key = l[0].to_string();
+        let value = l[1..]
+            .iter()
+            .fold("".to_string(), |mut left, right| {
+                left.push_str(right);
+                left.push_str(sep);
+                left
+            })
+            .strip_suffix(sep)
+            .unwrap_or(l[1])
+            .to_string(); // TODO: test
+
+        if value.is_empty() {
+            continue;
+        }
+
+        result
+            .entry(key)
+            .and_modify(|l| l.push(value.clone()))
+            .or_insert(vec![value]);
+    }
+
+    result
 }
 // #endregion
 

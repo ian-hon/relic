@@ -3,17 +3,20 @@ use std::{collections::HashSet, path::Path};
 use crate::core::{
     object::{Object, ObjectLike},
     oid::ObjectID,
-    util::{empty_oid, into_human_readable, oid_digest, string_to_oid, url_decode, url_encode},
+    util::{
+        empty_oid, into_human_readable, oid_digest, parse_kv_pair, string_to_oid, url_decode,
+        url_encode,
+    },
 };
 
 /*
 Commit format:
 tree {oid}
 parent {oid}
-timestamp
-author
-message
-description
+timestmap {timestamp}
+author {author}
+message {message}
+description {description}
 */
 
 const DELIMITER: &str = "C\0";
@@ -22,8 +25,15 @@ const MESSAGE_TRUNC_LENGTH: usize = 40;
 #[derive(Debug, Clone)]
 pub struct Commit {
     pub oid: ObjectID,
-    pub tree: ObjectID,           // tree of the commit
-    pub parent: Option<ObjectID>, // commit before this one
+    pub tree: ObjectID,         // tree of the commit
+    pub parents: Vec<ObjectID>, // commit before this one
+    // length = 0
+    //      first ever commit in this repo
+    // length = 1
+    //      regular commit. parent is OID of previous commit
+    // length >= 2
+    //      merge commit. parent[0] is the original parent.
+    //      parent[1..] are the other commits merged into this branch
     pub timestamp: u64,
     pub author: String,      // lets assume author names follow a strict format
     pub message: String,     // url encoded when saved
@@ -32,7 +42,7 @@ pub struct Commit {
 impl Commit {
     pub fn new(
         tree: ObjectID,
-        parent: Option<ObjectID>,
+        parents: Vec<ObjectID>,
         timestamp: u64,
         author: String,
         message: String,
@@ -43,7 +53,7 @@ impl Commit {
         let mut c = Commit {
             oid: empty_oid().into(),
             tree,
-            parent,
+            parents,
             timestamp,
             author,
             message,
@@ -66,17 +76,31 @@ impl Commit {
     pub fn as_string(&self) -> String {
         // tree {oid}
         // parent {oid}
-        // timestamp
-        // author
-        // message
-        // description
+        // timestmap {timestamp}
+        // author {author}
+        // message {message}
+        // description {description}
         format!(
-            "tree {}\nparent {}\n{}\n{}\n{}\n{}",
+            "tree {}
+{}
+timestamp {}
+author {}
+message {}
+description {}",
             self.tree.to_string(),
-            self.parent.map_or_else(
-                || Into::<ObjectID>::into(empty_oid()).to_string(),
-                |p| p.to_string()
-            ),
+            if self.parents.is_empty() {
+                format!("parent {}", ObjectID::new(empty_oid()).to_string())
+            } else {
+                // EXPENSIVE!
+                self.parents
+                    .iter()
+                    .fold("".to_string(), |mut left, right| {
+                        left.push_str(&format!("parent {}\n", right.to_string()));
+                        left
+                    })
+                    .trim_end()
+                    .to_string()
+            },
             self.timestamp,
             self.author,
             url_encode(&self.message),
@@ -123,50 +147,34 @@ impl Commit {
         let payload = Object::extract_body(&payload)?; // remove the header
         let payload = str::from_utf8(&payload).unwrap();
 
-        let mut lines = payload.lines();
+        let pairs = parse_kv_pair(payload, " ");
 
-        let tree = lines.next()?;
-        let parent = lines.next()?;
-        let l = lines.next()?;
-        let timestamp = match (l).parse::<u64>() {
+        println!("pairs: {pairs:?}");
+
+        // TODO: test these [0]s
+        let tree = ObjectID::from_string(&pairs.get("tree")?[0]);
+        let parents = pairs
+            .get("parent")?
+            .iter()
+            .map(|p| ObjectID::new(string_to_oid(p)))
+            .collect::<Vec<ObjectID>>();
+        let timestamp = match pairs.get("timestamp")?[0].parse::<u64>() {
             Ok(t) => t,
             Err(_) => return None,
         };
-        let author = lines.next()?.to_string();
-        let message = url_decode(lines.next()?);
-        let description = url_decode(lines.next().unwrap_or(""));
-
-        /*
-        tree {oid}
-        parent {oid}
-        timestamp
-        author
-        message
-        description
-        */
-
-        let tree_elements = tree.split(" ").collect::<Vec<&str>>();
-        if tree_elements.len() < 2 {
-            return None;
-        }
-        let tree: ObjectID = string_to_oid(tree_elements[1]).into();
-
-        let parent_elements = parent.split(" ").collect::<Vec<&str>>();
-        if parent_elements.len() < 2 {
-            return None;
-        }
-        let parent: ObjectID = Into::<ObjectID>::into(string_to_oid(parent_elements[1]));
-        // if theres a collision with 64 0s then ill be super happy
-        let parent = if parent == empty_oid().into() {
-            None
+        // EXPENSIVE!
+        let author = pairs.get("author")?[0].clone();
+        let message = pairs.get("message")?[0].clone();
+        let description = if let Some(d) = pairs.get("description") {
+            d[0].to_string()
         } else {
-            Some(parent)
+            "".to_string()
         };
 
         let mut c = Commit {
             oid: empty_oid().into(),
             tree,
-            parent,
+            parents,
             timestamp,
             author,
             message,
@@ -179,26 +187,43 @@ impl Commit {
     }
 
     // #region actual logic
-    pub fn get_parent(&self, sanctum_path: &Path) -> Option<Commit> {
-        match self.parent {
-            Some(p) => p.construct(&sanctum_path).map_or_else(
-                |_| None,
-                |p| match p {
+    pub fn get_parents(&self, sanctum_path: &Path) -> Vec<Commit> {
+        self.parents
+            .iter()
+            .map(|p| match p.construct(sanctum_path) {
+                Ok(o) => match o {
                     Object::Commit(c) => Some(c),
                     _ => None,
                 },
-            ),
-            None => None,
-        }
+                Err(_) => None,
+            })
+            .filter_map(|x| x)
+            .collect()
     }
 
-    pub fn get_all_previous(&self, sanctum_path: &Path) -> Vec<Commit> {
+    pub fn get_all_ancestors(&self, sanctum_path: &Path) -> Vec<Commit> {
+        // take entire parent
         let mut result = vec![self.clone()];
 
-        let mut current = self.clone();
-        while let Some(p) = current.get_parent(sanctum_path) {
-            current = p.clone();
-            result.push(p);
+        let mut current = self.get_parents(sanctum_path);
+        while !current.is_empty() {
+            let p = current[0].clone();
+            result.append(&mut current.clone());
+            current = p.get_parents(sanctum_path);
+        }
+
+        result
+    }
+
+    pub fn get_all_nuclear_ancestors(&self, sanctum_path: &Path) -> Vec<Commit> {
+        // take only parent[0]
+        let mut result = vec![self.clone()];
+
+        let mut current = self.get_parents(sanctum_path);
+        while !current.is_empty() {
+            let p = current[0].clone();
+            result.push(p.clone());
+            current = p.get_parents(sanctum_path);
         }
 
         result
@@ -221,11 +246,14 @@ impl Commit {
         // //      if none exists => None
 
         if upstream.get_oid() == local.get_oid() {
+            // check:
+            // u.parents contain l.oid
+            // l.parents contain u.oid
             return CommitState::Tie;
         }
 
-        let mut u_all = upstream.get_all_previous(sanctum_path);
-        let mut l_all = local.get_all_previous(sanctum_path);
+        let mut u_all = upstream.get_all_ancestors(sanctum_path);
+        let mut l_all = local.get_all_ancestors(sanctum_path);
         // EXPENSIVE!
         u_all.reverse();
         l_all.reverse();

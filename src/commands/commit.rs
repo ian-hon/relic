@@ -54,7 +54,7 @@ pub fn commit(state: Option<&mut State>, args: &ArgMatches) {
 
                 let c = Commit::new(
                     tree.get_oid(),
-                    Some(head.get_oid()),
+                    vec![head.get_oid()],
                     get_time(),
                     "none".to_string(),
                     message,
@@ -75,7 +75,7 @@ pub fn commit(state: Option<&mut State>, args: &ArgMatches) {
                 // write into the file
                 let c = Commit::new(
                     tree.get_oid(),
-                    None,
+                    vec![],
                     get_time(),
                     "none".to_string(),
                     message,
