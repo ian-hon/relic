@@ -54,14 +54,8 @@ pub fn commit(state: Option<&mut State>, args: &ArgMatches) {
 
                 let c = Commit::new(
                     tree.get_oid(),
-                    // vec![head.get_oid()],
-                    vec![
-                        head.get_oid(),
-                        string_to_oid(
-                            "839850acdfa832ab1125d22d4eb936ed317a9dca637ca19d4c96dd21143cecc5",
-                        )
-                        .into(),
-                    ],
+                    Some(head.get_oid()),
+                    vec![],
                     get_time(),
                     "none".to_string(),
                     message,
@@ -82,6 +76,7 @@ pub fn commit(state: Option<&mut State>, args: &ArgMatches) {
                 // write into the file
                 let c = Commit::new(
                     tree.get_oid(),
+                    None,
                     vec![],
                     get_time(),
                     "none".to_string(),

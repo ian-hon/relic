@@ -25,15 +25,15 @@ const MESSAGE_TRUNC_LENGTH: usize = 40;
 #[derive(Debug, Clone)]
 pub struct Commit {
     pub oid: ObjectID,
-    pub tree: ObjectID,         // tree of the commit
-    pub parents: Vec<ObjectID>, // commit before this one
+    pub tree: ObjectID,            // tree of the commit
+    pub parent: Option<ObjectID>,  // commit before this one
+    pub surrogates: Vec<ObjectID>, // commits used in a merge
     // length = 0
-    //      first ever commit in this repo
+    //      no merge (default)
     // length = 1
-    //      regular commit. parent is OID of previous commit
+    //      regular merge with one other commit
     // length >= 2
-    //      merge commit. parent[0] is the original parent.
-    //      parent[1..] are the other commits merged into this branch
+    //      octopus merge (more than one commit merged with this)
     pub timestamp: u64,
     pub author: String,      // lets assume author names follow a strict format
     pub message: String,     // url encoded when saved
@@ -42,7 +42,8 @@ pub struct Commit {
 impl Commit {
     pub fn new(
         tree: ObjectID,
-        parents: Vec<ObjectID>,
+        parent: Option<ObjectID>,
+        surrogates: Vec<ObjectID>,
         timestamp: u64,
         author: String,
         message: String,
@@ -53,7 +54,8 @@ impl Commit {
         let mut c = Commit {
             oid: empty_oid().into(),
             tree,
-            parents,
+            parent,
+            surrogates,
             timestamp,
             author,
             message,
@@ -82,25 +84,25 @@ impl Commit {
         // description {description}
         format!(
             "tree {}
-{}
-timestamp {}
+parent {}
+{}timestamp {}
 author {}
 message {}
 description {}",
             self.tree.to_string(),
-            if self.parents.is_empty() {
-                format!("parent {}", ObjectID::new(empty_oid()).to_string())
+            if let Some(p) = self.parent {
+                p.to_string()
             } else {
-                // EXPENSIVE!
-                self.parents
-                    .iter()
-                    .fold("".to_string(), |mut left, right| {
-                        left.push_str(&format!("parent {}\n", right.to_string()));
-                        left
-                    })
-                    .trim_end()
-                    .to_string()
+                ObjectID::empty().to_string()
             },
+            // EXPENSIVE!
+            self.surrogates
+                .iter()
+                .fold("".to_string(), |mut left, right| {
+                    left.push_str(&format!("surrogate {}\n", right.to_string()));
+                    left
+                })
+                .to_string(),
             self.timestamp,
             self.author,
             url_encode(&self.message),
@@ -148,11 +150,21 @@ description {}",
         let pairs = parse_kv_pair(payload, " ");
 
         let tree = ObjectID::from_string(&pairs.get("tree")?[0]);
-        let parents = pairs
-            .get("parent")?
-            .iter()
-            .map(|p| ObjectID::new(string_to_oid(p)))
-            .collect::<Vec<ObjectID>>();
+        let parent = {
+            let o = string_to_oid(&pairs.get("parent")?[0]);
+            if o == empty_oid() {
+                None
+            } else {
+                Some(o.into())
+            }
+        };
+        let surrogates = if let Some(s) = pairs.get("surrogate") {
+            s.iter()
+                .map(|p| ObjectID::new(string_to_oid(p)))
+                .collect::<Vec<ObjectID>>()
+        } else {
+            vec![]
+        };
         let timestamp = match pairs.get("timestamp")?[0].parse::<u64>() {
             Ok(t) => t,
             Err(_) => return None,
@@ -173,7 +185,8 @@ description {}",
         let mut c = Commit {
             oid: empty_oid().into(),
             tree,
-            parents,
+            parent,
+            surrogates,
             timestamp,
             author,
             message,
@@ -186,50 +199,74 @@ description {}",
     }
 
     // #region actual logic
-    pub fn get_parents(&self, sanctum_path: &Path) -> Vec<Commit> {
-        self.parents
-            .iter()
-            .map(|p| match p.construct(sanctum_path) {
-                Ok(o) => match o {
+    pub fn get_parent(&self, sanctum_path: &Path) -> Option<Commit> {
+        match self.parent {
+            Some(p) => p.construct(&sanctum_path).map_or_else(
+                |_| None,
+                |p| match p {
                     Object::Commit(c) => Some(c),
                     _ => None,
                 },
-                Err(_) => None,
-            })
-            .filter_map(|x| x)
-            .collect()
+            ),
+            None => None,
+        }
+    }
+
+    pub fn get_ancestors(&self, sanctum_path: &Path) -> Vec<Commit> {
+        // get parents + surrogate for one singular commit
+        if let Some(parent) = self.parent {
+            let mut r = match parent.construct(sanctum_path) {
+                Ok(o) => match o {
+                    Object::Commit(c) => vec![c],
+                    _ => return vec![],
+                },
+                Err(_) => return vec![],
+            };
+
+            r.append(
+                &mut self
+                    .surrogates
+                    .iter()
+                    .map(|p| match p.construct(sanctum_path) {
+                        Ok(o) => match o {
+                            Object::Commit(c) => Some(c),
+                            _ => None,
+                        },
+                        Err(_) => None,
+                    })
+                    .filter_map(|x| x)
+                    .collect(),
+            );
+
+            return r;
+        }
+        vec![]
     }
 
     pub fn get_all_ancestors(&self, sanctum_path: &Path) -> Vec<Commit> {
-        // take entire parent
+        // get parents + surrogate of all ancestors of this commit
         let mut result = vec![self.clone()];
 
-        let mut current = self.get_parents(sanctum_path);
+        let mut current = self.get_ancestors(sanctum_path);
         while !current.is_empty() {
             let p = current[0].clone();
             result.append(&mut current.clone());
-            current = p.get_parents(sanctum_path);
+            current = p.get_ancestors(sanctum_path);
         }
 
         result
     }
 
-    pub fn get_all_nuclear_ancestors(&self, sanctum_path: &Path) -> Vec<Commit> {
-        // take only parent[0]
+    pub fn get_all_parents(&self, sanctum_path: &Path) -> Vec<Commit> {
         let mut result = vec![self.clone()];
 
-        let mut current = self.get_parents(sanctum_path);
-        while !current.is_empty() {
-            let p = current[0].clone();
-            result.push(p.clone());
-            current = p.get_parents(sanctum_path);
+        let mut current = self.clone();
+        while let Some(p) = current.get_parent(sanctum_path) {
+            current = p.clone();
+            result.push(p);
         }
 
         result
-    }
-
-    pub fn get_surrogate_parents(&self) -> Vec<ObjectID> {
-        self.parents[1..].iter().map(|x| x.clone()).collect()
     }
 
     pub fn get_state(upstream: Commit, local: Commit, sanctum_path: &Path) -> CommitState {
@@ -240,26 +277,15 @@ description {}",
         //      find the last common commit between upstream and local
         // //      if none exists => None
 
+        // i dont think we need to care about the surrogate parents
+        // (emphasis on think)
+
         if upstream.get_oid() == local.get_oid() {
-            // check:
-            // u.parents contain l.oid
-            // l.parents contain u.oid
-
             return CommitState::Tie;
         }
 
-        // TODO: test
-        // for merge commits
-        if upstream.get_surrogate_parents().contains(&local.get_oid()) {
-            return CommitState::Tie;
-        }
-
-        if local.get_surrogate_parents().contains(&upstream.get_oid()) {
-            return CommitState::Tie;
-        }
-
-        let mut u_all = upstream.get_all_ancestors(sanctum_path);
-        let mut l_all = local.get_all_ancestors(sanctum_path);
+        let mut u_all = upstream.get_all_parents(sanctum_path);
+        let mut l_all = local.get_all_parents(sanctum_path);
         // EXPENSIVE!
         u_all.reverse();
         l_all.reverse();

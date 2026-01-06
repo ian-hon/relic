@@ -17,27 +17,21 @@ use crate::core::{
 pub fn test(state: Option<&mut State>, _: &ArgMatches) {
     let Some(state) = state else { return };
 
-    // upstream:
-    // 2a627be346271aa7d92e75c40fecf1c6eeb580f1edcc0d7a89b72fa83d387b50
-    // 3453a3171d753f9c330660516e17d858ce038b8717627751028852bdd7607cc1
-    // 082abe8f89802f126260fc094dce9dab6377be2d3e1fe6d9ce192cfe809f9bf0 <
-    // 62cf36b74df75fac94b17ba324e1ed41457288a6416f6ed5580452ab70c70b9c
-    // 3f2f82ac1feedbba44968b9ccacdc116b642ededc4240c9fc3a6f2a84e5c999d
-    // 36b04bc9caa6ad24c58c2bab388c26b6170ed4503cf40d8c36c966d64ea58d04 (contains local[5] as surrogate)
+    // b875a2f0b56ec1f409a4f1c8f459eff3dae0ded5b389cf9aed50e10e5c34d001
+    // 7780bf9fe8fcc104f7a4ed5966597629fdef49a3d6224da15659879c1628b8df
+    // 03a0bdb5f55dca017213ef209e8b81b8fb4ecf61ecf0b8b37892a18ac082e76c <
+    // 24fc8a2a3a465740221c59e0bdc029a0738cde2228f8121a900f9f33d814e6f2
+    // 38b9f53395c045d88c38e51d2fab95c9b37607f85a43461ca55e2d7fb102f3cd
 
-    // local
-    // 2a627be346271aa7d92e75c40fecf1c6eeb580f1edcc0d7a89b72fa83d387b50
-    // 3453a3171d753f9c330660516e17d858ce038b8717627751028852bdd7607cc1
-    // 082abe8f89802f126260fc094dce9dab6377be2d3e1fe6d9ce192cfe809f9bf0 <
-    // eb72583727a851a6aeb229d829b0fa3d89f9d858354981e5c489d202a10e8818
-    // 839850acdfa832ab1125d22d4eb936ed317a9dca637ca19d4c96dd21143cecc5
-
-    // merge local[5] into upstream
-    // local[5]: 839850acdfa832ab1125d22d4eb936ed317a9dca637ca19d4c96dd21143cecc5
+    // b875a2f0b56ec1f409a4f1c8f459eff3dae0ded5b389cf9aed50e10e5c34d001
+    // 7780bf9fe8fcc104f7a4ed5966597629fdef49a3d6224da15659879c1628b8df
+    // 03a0bdb5f55dca017213ef209e8b81b8fb4ecf61ecf0b8b37892a18ac082e76c <
+    // 93ffed3e8af5b67c1e7f1e576acb6a675bd34f84c1f5935b1c9e62bbf3c6d701
+    // ad689344e1c55d60c6eb0d615830374d644bada373e63911ea61bb7b139a88d9
 
     match Commit::get_state(
         match ObjectID::from_string(
-            "36b04bc9caa6ad24c58c2bab388c26b6170ed4503cf40d8c36c966d64ea58d04",
+            "ad689344e1c55d60c6eb0d615830374d644bada373e63911ea61bb7b139a88d9",
         )
         .construct(&state.get_sanctum_path())
         {
@@ -48,7 +42,7 @@ pub fn test(state: Option<&mut State>, _: &ArgMatches) {
             _ => panic!("2"),
         },
         match ObjectID::from_string(
-            "839850acdfa832ab1125d22d4eb936ed317a9dca637ca19d4c96dd21143cecc5",
+            "38b9f53395c045d88c38e51d2fab95c9b37607f85a43461ca55e2d7fb102f3cd",
         )
         .construct(&state.get_sanctum_path())
         {
@@ -79,7 +73,7 @@ pub fn test(state: Option<&mut State>, _: &ArgMatches) {
     // println!(
     //     "{}",
     //     match ObjectID::from_string(
-    //         "9c638178b4fa917750bc1ee1a23f9896515013977f31cd3c935400f01fd76950"
+    //         "204e3546cc770b1880afb6969ff24c364e9e24d8db145df9e2d11c3ad17a894f"
     //     )
     //     .construct(&state.get_sanctum_path())
     //     .unwrap()
