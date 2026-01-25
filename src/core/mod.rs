@@ -6,5 +6,7 @@ pub mod oid;
 
 pub mod tracking;
 
+pub mod write;
+
 pub mod data;
 pub mod state;

@@ -29,46 +29,46 @@ pub fn test(state: Option<&mut State>, _: &ArgMatches) {
     // 93ffed3e8af5b67c1e7f1e576acb6a675bd34f84c1f5935b1c9e62bbf3c6d701
     // ad689344e1c55d60c6eb0d615830374d644bada373e63911ea61bb7b139a88d9
 
-    match Commit::get_state(
-        match ObjectID::from_string(
-            "ad689344e1c55d60c6eb0d615830374d644bada373e63911ea61bb7b139a88d9",
-        )
-        .construct(&state.get_sanctum_path())
-        {
-            Ok(r) => match r {
-                Object::Commit(c) => c,
-                _ => panic!("1"),
-            },
-            _ => panic!("2"),
-        },
-        match ObjectID::from_string(
-            "38b9f53395c045d88c38e51d2fab95c9b37607f85a43461ca55e2d7fb102f3cd",
-        )
-        .construct(&state.get_sanctum_path())
-        {
-            Ok(r) => match r {
-                Object::Commit(c) => c,
-                _ => panic!("3"),
-            },
-            _ => panic!("4"),
-        },
-        &state.get_sanctum_path(),
-    ) {
-        CommitState::Conflict(l) => println!("luca: {}", l.get_oid().to_string()),
-        CommitState::Ahead(l) => {
-            println!("ahead");
-            for i in l {
-                println!("OID: {}", i.get_oid().to_string());
-            }
-        }
-        CommitState::Behind(l) => {
-            println!("behind");
-            for i in l {
-                println!("OID: {}", i.get_oid().to_string());
-            }
-        }
-        i => println!("{i:?}"),
-    }
+    // match Commit::get_state(
+    //     match ObjectID::from_string(
+    //         "ad689344e1c55d60c6eb0d615830374d644bada373e63911ea61bb7b139a88d9",
+    //     )
+    //     .construct(&state.get_sanctum_path())
+    //     {
+    //         Ok(r) => match r {
+    //             Object::Commit(c) => c,
+    //             _ => panic!("1"),
+    //         },
+    //         _ => panic!("2"),
+    //     },
+    //     match ObjectID::from_string(
+    //         "38b9f53395c045d88c38e51d2fab95c9b37607f85a43461ca55e2d7fb102f3cd",
+    //     )
+    //     .construct(&state.get_sanctum_path())
+    //     {
+    //         Ok(r) => match r {
+    //             Object::Commit(c) => c,
+    //             _ => panic!("3"),
+    //         },
+    //         _ => panic!("4"),
+    //     },
+    //     &state.get_sanctum_path(),
+    // ) {
+    //     CommitState::Conflict(l) => println!("luca: {}", l.get_oid().to_string()),
+    //     CommitState::Ahead(l) => {
+    //         println!("ahead");
+    //         for i in l {
+    //             println!("OID: {}", i.get_oid().to_string());
+    //         }
+    //     }
+    //     CommitState::Behind(l) => {
+    //         println!("behind");
+    //         for i in l {
+    //             println!("OID: {}", i.get_oid().to_string());
+    //         }
+    //     }
+    //     i => println!("{i:?}"),
+    // }
 
     // println!(
     //     "{}",
@@ -82,4 +82,25 @@ pub fn test(state: Option<&mut State>, _: &ArgMatches) {
     //         _ => panic!(),
     //     }
     // );
+
+    let c = match ObjectID::from_string(
+        "7039b5ffb72d126cbd1f567aefbb0170f695e13350ab743a3c691e80ac1d89b4",
+    )
+    .construct(&state.get_sanctum_path())
+    .unwrap()
+    {
+        Object::Commit(c) => c,
+        _ => panic!(),
+    };
+
+    println!("COMMIT TREE : {}", c.tree.to_string());
+
+    println!(
+        "{:?}",
+        crate::core::write::write_commit(
+            &(Path::new("./lorem/ipsum/").into()),
+            &state.get_sanctum_path(),
+            &c,
+        )
+    );
 }

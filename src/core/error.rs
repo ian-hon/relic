@@ -2,6 +2,7 @@
 pub enum RelicError {
     IgnoredFile,
     ConfigurationIncorrect,
+    Unimplemented,
     IOError(IOError),
     RelicInfo(Box<RelicError>),
     SanctumError(SanctumError),
