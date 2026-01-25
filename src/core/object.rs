@@ -44,6 +44,7 @@ pub enum Object {
 impl Object {
     pub fn extract_header(payload: &Vec<u8>) -> Option<ObjectType> {
         if payload.len() < 2 {
+            panic!("none");
             return None;
         }
 
@@ -74,7 +75,7 @@ pub trait ObjectLike {
     fn get_oid(&self) -> ObjectID;
     #[allow(unused)]
     fn as_string(&self) -> String;
-    fn serialise(&self) -> String;
+    fn serialise(&self) -> Vec<u8>;
     fn write(&self, sanctum_path: &Path) -> Option<RelicError> {
         let (prefix_path, suffix_path) = self.get_oid().get_paths(sanctum_path);
 

@@ -21,7 +21,7 @@ const HEADER: &str = "B\0";
 
 #[derive(Debug)]
 pub struct Blob {
-    oid: ObjectID,
+    pub oid: ObjectID,
     pub payload: Vec<u8>,
 }
 impl Blob {
@@ -102,10 +102,8 @@ impl ObjectLike for Blob {
         "".to_string()
     }
 
-    fn serialise(&self) -> String {
+    fn serialise(&self) -> Vec<u8> {
         // returns with header
-
-        // TODO: handle invalid utf-8s
-        str::from_utf8(&self.payload).map_or("".to_string(), |s| s.to_string())
+        self.payload.clone()
     }
 }

@@ -66,7 +66,7 @@ pub fn commit(state: Option<&mut State>, args: &ArgMatches) {
                 println!(
                     "IN COMMIT\n{}\n{}",
                     head.get_oid().to_string(),
-                    c.serialise()
+                    str::from_utf8(&c.serialise()).unwrap()
                 );
 
                 println!("writing: {}", c.get_oid().to_string());

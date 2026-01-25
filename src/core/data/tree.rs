@@ -5,7 +5,7 @@ use crate::core::error::IOError;
 use crate::core::object::{ObjectLike, ObjectType};
 use crate::core::oid::ObjectID;
 use crate::core::state::State;
-use crate::core::util::{empty_oid, oid_digest, string_to_oid};
+use crate::core::util::{empty_oid, oid_digest, oid_digest_data, string_to_oid};
 use crate::core::{data::blob::Blob, error::RelicError};
 
 /*
@@ -24,7 +24,7 @@ const HEADER: &str = "T\0";
 
 #[derive(Debug)]
 pub struct Tree {
-    oid: ObjectID,
+    pub oid: ObjectID,
     pub children: Vec<TreeEntry>,
 }
 
@@ -36,9 +36,7 @@ impl Tree {
             children,
         };
 
-        // t.oid = t.as_payload()
-        // TODO: test
-        t.oid = oid_digest(&t.serialise()).into();
+        t.oid = oid_digest_data(&t.serialise()).into();
 
         t.write(sanctum_path);
 
@@ -51,8 +49,11 @@ impl Tree {
 
         let mut children = vec![];
 
-        let mut lines = payload.lines();
-        lines.next(); // skip the header
+        let lines = match payload.strip_prefix(HEADER) {
+            Some(l) => l,
+            None => return None,
+        };
+        let mut lines = lines.lines();
 
         while let Some(line) = lines.next() {
             let mut l = line.split(" ");
@@ -73,7 +74,10 @@ impl Tree {
         }
 
         Some(Tree {
-            oid: oid_digest(&Tree::string_from_children(&children)).into(),
+            oid: oid_digest(
+                format!("{}{}", HEADER, &Tree::string_from_children(&children)).as_str(),
+            )
+            .into(),
             children,
         })
     }
@@ -115,6 +119,17 @@ impl Tree {
                             continue;
                         }
 
+                        // TODO: FIX
+                        // its not as simple as this
+                        // need to check if any file in ignore_set is a suffix of relative
+                        // eg:
+                        // ignore   : .DS_Store
+                        // relative : /lorem/ipsum/.DS_Store
+                        // since a file in ignore is a suffix, ignore this blob
+                        // do the same for trees
+                        //
+                        // need to add a specifier for only root files too
+                        // /.DS_Store to only ignore files at root, nowhere else
                         if state.ignore_set.files.contains(&relative) {
                             continue;
                         }
@@ -130,7 +145,9 @@ impl Tree {
                             Err(e) => return Err(e),
                         }
                     } else if file_type.is_dir() {
-                        if !state.tracking_set.directories.contains(&relative) {
+                        if (relative_path == Path::new("."))
+                            && (!state.tracking_set.directories.contains(&relative))
+                        {
                             continue;
                         }
 
@@ -190,8 +207,11 @@ impl Tree {
             .to_string() // EXPENSIVE!
     }
 
-    fn as_payload(&self) -> String {
+    fn as_payload(&self) -> Vec<u8> {
+        // EXPENSIVE
         format!("{HEADER}{}", Self::string_from_children(&self.children))
+            .as_bytes()
+            .to_vec()
     }
 }
 
@@ -205,7 +225,7 @@ impl ObjectLike for Tree {
         Tree::string_from_children(&self.children)
     }
 
-    fn serialise(&self) -> String {
+    fn serialise(&self) -> Vec<u8> {
         // returns with header
         self.as_payload()
     }
@@ -213,7 +233,7 @@ impl ObjectLike for Tree {
 
 #[derive(Debug)]
 pub struct TreeEntry {
-    oid: ObjectID,
-    name: String, // use OsString instead?
-    otype: ObjectType,
+    pub oid: ObjectID,
+    pub name: String, // use OsString instead?
+    pub otype: ObjectType,
 }

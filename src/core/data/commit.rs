@@ -4,8 +4,8 @@ use crate::core::{
     object::{Object, ObjectLike},
     oid::ObjectID,
     util::{
-        empty_oid, into_human_readable, oid_digest, parse_kv_pair, string_to_oid, url_decode,
-        url_encode,
+        empty_oid, into_human_readable, oid_digest, oid_digest_data, parse_kv_pair, string_to_oid,
+        url_decode, url_encode,
     },
 };
 
@@ -62,7 +62,7 @@ impl Commit {
             description,
         };
 
-        c.oid = oid_digest(&c.serialise()).into();
+        c.oid = oid_digest_data(&c.serialise()).into();
 
         println!("NEW COMMIT : {}", c.oid.to_string());
 
@@ -71,8 +71,10 @@ impl Commit {
         c
     }
 
-    pub fn as_payload(&self) -> String {
+    pub fn as_payload(&self) -> Vec<u8> {
         format!("{DELIMITER}{}", self.as_string())
+            .as_bytes()
+            .to_vec()
     }
 
     pub fn as_string(&self) -> String {
@@ -193,7 +195,7 @@ description {}",
             description,
         };
 
-        c.oid = oid_digest(&c.serialise()).into();
+        c.oid = oid_digest_data(&c.serialise()).into();
 
         Some(c)
     }
@@ -340,7 +342,7 @@ impl ObjectLike for Commit {
         self.as_string()
     }
 
-    fn serialise(&self) -> String {
+    fn serialise(&self) -> Vec<u8> {
         // returns with header
         self.as_payload()
     }
