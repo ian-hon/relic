@@ -21,13 +21,10 @@ pub fn write_commit(
         _ => return Some(RelicError::ConfigurationIncorrect),
     };
 
-    println!("STARTING: {}", tree.oid.to_string());
-
     write_tree(destination, sanctum_path, &tree)
 }
 
 fn write_tree(current_path: &PathBuf, sanctum_path: &PathBuf, tree: &Tree) -> Option<RelicError> {
-    println!("started at {current_path:?}");
     let file_iter = match fs::read_dir(current_path) {
         Ok(i) => i,
         Err(_) => return Some(RelicError::IOError(IOError::DirectoryCantOpen)),
@@ -60,20 +57,12 @@ fn write_tree(current_path: &PathBuf, sanctum_path: &PathBuf, tree: &Tree) -> Op
                     directories.remove(&OsString::from(&children.name));
 
                     trees.push((t, dir_path));
-
-                    // if let Some(r) = write_tree(&dir_path, &sanctum_path, &t) {
-                    //     return Some(r);
-                    // }
                 }
                 Object::Blob(b) => {
                     let file_path = current_path.join(children.name.clone());
-                    // files.remove(&(file_path.clone()).into_os_string());
                     files.remove(&OsString::from(&children.name));
 
                     blobs.push((b, file_path));
-                    // if let Some(body) = b.get_body() {
-                    //     let _ = fs::write(file_path, body);
-                    // }
                 }
                 _ => unimplemented!(),
             },
@@ -82,14 +71,11 @@ fn write_tree(current_path: &PathBuf, sanctum_path: &PathBuf, tree: &Tree) -> Op
     }
 
     for file in files {
-        // println!("remove file: {}", file.into_string().unwrap());
-        fs::remove_file(Path::new(&file)).unwrap();
+        fs::remove_file(current_path.join(file)).unwrap();
     }
 
     for directory in directories {
-        // println!("remove directory: {}", directory.into_string().unwrap());
-        fs::remove_dir_all(Path::new(&directory)).unwrap();
-        // fs::remove_dir_all(path)
+        fs::remove_dir_all(current_path.join(directory)).unwrap();
     }
 
     for (t, p) in trees {
