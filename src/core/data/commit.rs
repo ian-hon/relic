@@ -4,8 +4,8 @@ use crate::core::{
     object::{Object, ObjectLike},
     oid::ObjectID,
     util::{
-        empty_oid, into_human_readable, oid_digest, oid_digest_data, parse_kv_pair, string_to_oid,
-        url_decode, url_encode,
+        empty_oid, into_human_readable, oid_digest_data, parse_kv_pair, string_to_oid, url_decode,
+        url_encode,
     },
 };
 

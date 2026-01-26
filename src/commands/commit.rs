@@ -7,7 +7,7 @@ use crate::core::{
     error::{IOError, RelicError},
     object::ObjectLike,
     state::State,
-    util::{get_time, string_to_oid},
+    util::get_time,
 };
 
 pub fn commit(state: Option<&mut State>, args: &ArgMatches) {
