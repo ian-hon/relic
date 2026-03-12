@@ -83,24 +83,26 @@ pub fn test(state: Option<&mut State>, _: &ArgMatches) {
     //     }
     // );
 
-    let c = match ObjectID::from_string(
-        "bca8fd26f1f9b4b6093960dab35d3b51a1b2545cc006e2146e84d59b7d50ea66",
-    )
-    .construct(&state.get_sanctum_path())
-    .unwrap()
-    {
-        Object::Commit(c) => c,
-        _ => panic!(),
-    };
+    // let c = match ObjectID::from_string(
+    //     "bca8fd26f1f9b4b6093960dab35d3b51a1b2545cc006e2146e84d59b7d50ea66",
+    // )
+    // .construct(&state.get_sanctum_path())
+    // .unwrap()
+    // {
+    //     Object::Commit(c) => c,
+    //     _ => panic!(),
+    // };
 
-    println!("COMMIT TREE : {}", c.tree.to_string());
+    // println!("COMMIT TREE : {}", c.tree.to_string());
 
-    println!(
-        "{:?}",
-        crate::core::write::write_commit(
-            &(Path::new("./lorem/ipsum/").into()),
-            &state.get_sanctum_path(),
-            &c,
-        )
-    );
+    // println!(
+    //     "{:?}",
+    //     crate::core::write::write_commit(
+    //         &(Path::new("./lorem/ipsum/").into()),
+    //         &state.get_sanctum_path(),
+    //         &c,
+    //     )
+    // );
+
+    println!("{:?}", state.fetch_head_commit());
 }

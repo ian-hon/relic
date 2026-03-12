@@ -9,6 +9,7 @@ use crate::core::{
 };
 
 pub const DELIMITER: &str = "branch";
+pub const DEFAULT_BRANCH: &str = "main";
 
 /*
 two formats:
@@ -17,7 +18,7 @@ two formats:
 - branch\0{branch name}
     - connected to branch
 */
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Branch {
     pub name: String,
     pub head: ObjectID,
@@ -132,8 +133,8 @@ impl Branch {
             name,
             head: head.oid,
         };
-        // if let Ok(_) = fs::write(file_path, head.oid.to_string()) {
-        if let Ok(_) = fs::write(file_path, HeadType::Branch(b.clone()).to_string()) {
+        if let Ok(_) = fs::write(file_path, head.oid.to_string()) {
+            // if let Ok(_) = fs::write(file_path, HeadType::Branch(b.clone()).to_string()) {
             return Ok(b);
         }
 

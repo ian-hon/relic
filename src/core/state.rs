@@ -22,10 +22,11 @@ impl State {
         // load tracking and ignore set
         let relic_path = root_path.join(".relic");
         if !relic_path.exists() {
+            println!("relic");
             return None;
         }
 
-        let branches_path = root_path.join("branches");
+        let branches_path = relic_path.join("branches");
         if !branches_path.exists() {
             return None;
         }
