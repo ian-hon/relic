@@ -1,6 +1,7 @@
 use std::{fs, path::PathBuf};
 
 use crate::core::{
+    branch::branch::{Branch, HeadType},
     data::commit::Commit,
     error::{IOError, RelicError},
     object::Object,
@@ -12,7 +13,7 @@ use crate::core::{
 pub struct State {
     pub root_path: PathBuf,
     pub relic_path: PathBuf,
-
+    pub branches_path: PathBuf,
     pub tracking_set: ContentSet,
     pub ignore_set: ContentSet,
 }
@@ -24,17 +25,25 @@ impl State {
             return None;
         }
 
+        let branches_path = root_path.join("branches");
+        if !branches_path.exists() {
+            return None;
+        }
+
         let tracking_set = ContentSet::construct(&relic_path.join("tracked")).ok()?;
         let ignore_set = ContentSet::construct(&root_path.join(".relic_ignore")).ok()?;
 
         Some(State {
             root_path,
             relic_path,
+            branches_path,
             tracking_set,
             ignore_set,
         })
     }
 
+    // input: path to a file containing a singular oid
+    // output: Commit object from the oid
     fn fetch_from_commit_file(&self, path: PathBuf) -> Result<Option<Commit>, RelicError> {
         if !path.exists() {
             return Err(RelicError::IOError(IOError::FileNoExist));
@@ -60,11 +69,12 @@ impl State {
         Err(RelicError::IOError(IOError::FileCantOpen))
     }
 
-    pub fn fetch_head(&self) -> Result<Option<Commit>, RelicError> {
-        self.fetch_from_commit_file(self.get_head_path())
+    pub fn fetch_head_commit(&self) -> Result<Option<Commit>, RelicError> {
+        // self.fetch_from_commit_file(self.get_head_path())
+        Branch::get_head(self).and_then(|h| h.get_commit(&self.get_sanctum_path()))
     }
 
-    pub fn fetch_upstream(&self) -> Result<Option<Commit>, RelicError> {
+    pub fn fetch_upstream_commit(&self) -> Result<Option<Commit>, RelicError> {
         self.fetch_from_commit_file(self.get_upstream_path())
     }
 

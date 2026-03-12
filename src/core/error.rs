@@ -3,6 +3,7 @@ pub enum RelicError {
     IgnoredFile,
     ConfigurationIncorrect,
     Unimplemented,
+    BranchError(BranchError),
     IOError(IOError),
     RelicInfo(Box<RelicError>),
     SanctumError(SanctumError),
@@ -13,13 +14,25 @@ pub enum IOError {
     FileNoExist,
     FileCantOpen,
     FileCantCreate,
+    FileCantWrite,
+    FileCantDelete,
     DirectoryNoExist,
     DirectoryCantOpen,
     DirectoryCantCreate,
+    DirectoryCantDelete,
 }
 
 #[derive(Debug)]
 pub enum SanctumError {
     SanctumNotFound,
     RecordNoExist,
+}
+
+#[derive(Debug)]
+pub enum BranchError {
+    BranchExists,
+    BranchDoesntExist,
+
+    DetachedCommitExists,
+    DetachedCommitDoesntExist,
 }

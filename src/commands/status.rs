@@ -10,7 +10,7 @@ pub fn status(state: Option<&mut State>, _: &ArgMatches) {
 
     // compare head and upstream
     // match (fetch_head(relic_path), fetch_upstream(relic_path)) {
-    match (state.fetch_head(), state.fetch_upstream()) {
+    match (state.fetch_head_commit(), state.fetch_upstream_commit()) {
         (Ok(h), Ok(u)) => match (h, u) {
             (None, None) | (None, Some(_)) | (Some(_), None) => {
                 println!("no pending commits");

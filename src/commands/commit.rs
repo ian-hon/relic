@@ -1,8 +1,9 @@
-use std::{fs, path::Path};
+use std::path::Path;
 
 use clap::ArgMatches;
 
 use crate::core::{
+    branch::branch::{Branch, HeadType},
     data::{commit::Commit, tree::Tree},
     error::{IOError, RelicError},
     object::ObjectLike,
@@ -42,7 +43,7 @@ pub fn commit(state: Option<&mut State>, args: &ArgMatches) {
     };
 
     // update local head only
-    match state.fetch_head() {
+    match state.fetch_head_commit() {
         Ok(head) => {
             if let Some(head) = head {
                 // use head as parent
@@ -71,7 +72,11 @@ pub fn commit(state: Option<&mut State>, args: &ArgMatches) {
 
                 println!("writing: {}", c.get_oid().to_string());
 
-                let _ = fs::write(state.get_head_path(), c.get_oid().to_string());
+                if let Ok(HeadType::Branch(b)) = Branch::get_head(state) {
+                    let _ = Branch::update_branch(b.name, c, state);
+                }
+
+                // let _ = fs::write(state.get_head_path(), c.get_oid().to_string());
             } else {
                 // write into the file
                 let c = Commit::new(
@@ -87,7 +92,11 @@ pub fn commit(state: Option<&mut State>, args: &ArgMatches) {
 
                 println!("writing: {}", c.get_oid().to_string());
 
-                let _ = fs::write(state.get_head_path(), c.get_oid().to_string());
+                if let Ok(HeadType::Branch(b)) = Branch::get_head(state) {
+                    let _ = Branch::update_branch(b.name, c, state);
+                }
+
+                // let _ = fs::write(state.get_head_path(), c.get_oid().to_string());
             }
             println!("success");
         }

@@ -1,9 +1,4 @@
-use std::{
-    collections::HashSet,
-    ffi::OsString,
-    fs,
-    path::{Path, PathBuf},
-};
+use std::{collections::HashSet, ffi::OsString, fs, path::PathBuf};
 
 use crate::core::{
     data::{commit::Commit, tree::Tree},

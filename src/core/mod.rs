@@ -8,5 +8,6 @@ pub mod tracking;
 
 pub mod write;
 
+pub mod branch;
 pub mod data;
 pub mod state;

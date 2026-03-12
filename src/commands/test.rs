@@ -84,7 +84,7 @@ pub fn test(state: Option<&mut State>, _: &ArgMatches) {
     // );
 
     let c = match ObjectID::from_string(
-        "af4f279d2cfb30511d5e490e93aad9c4d5a3a501b8de1828067c2f1a0779376b",
+        "bca8fd26f1f9b4b6093960dab35d3b51a1b2545cc006e2146e84d59b7d50ea66",
     )
     .construct(&state.get_sanctum_path())
     .unwrap()
