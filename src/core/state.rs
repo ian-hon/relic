@@ -1,7 +1,10 @@
 use std::{fs, path::PathBuf};
 
 use crate::core::{
-    branch::branch::{Branch, HeadType},
+    branch::{
+        self,
+        branch::{Branch, BranchSource, HeadType},
+    },
     data::commit::Commit,
     error::{IOError, RelicError},
     object::Object,
@@ -10,34 +13,55 @@ use crate::core::{
     util::string_to_oid,
 };
 
+/* File structure:
+.relic
+    - branches/
+        - local/
+        - upstream/
+    - sanctum/
+    - head
+    - tracked
+*/
+
+const RELIC_PATH: &str = ".relic";
+const SANCTUM_PATH: &str = "sanctum";
+const BRANCHES_PATH: &str = "branches";
+const LOCAL_BRANCHES_PATH: &str = "local";
+const UPSTREAM_BRANCHES_PATH: &str = "upstream";
+const HEAD_PATH: &str = "head";
+// TODO: do we have untracked?
+const TRACKED_PATH: &str = "tracked";
+const RELIC_IGNORE_PATH: &str = ".relic_ignore";
+
 pub struct State {
     pub root_path: PathBuf,
-    pub relic_path: PathBuf,
-    pub branches_path: PathBuf,
     pub tracking_set: ContentSet,
     pub ignore_set: ContentSet,
 }
 impl State {
     pub fn construct(root_path: PathBuf) -> Option<State> {
         // load tracking and ignore set
-        let relic_path = root_path.join(".relic");
+        let relic_path = root_path.join(RELIC_PATH);
         if !relic_path.exists() {
-            println!("relic");
             return None;
         }
 
-        let branches_path = relic_path.join("branches");
+        let branches_path = relic_path.join(BRANCHES_PATH);
         if !branches_path.exists() {
             return None;
         }
 
-        let tracking_set = ContentSet::construct(&relic_path.join("tracked")).ok()?;
-        let ignore_set = ContentSet::construct(&root_path.join(".relic_ignore")).ok()?;
+        let local_branches_path = branches_path.join(LOCAL_BRANCHES_PATH);
+        let upstream_branches_path = branches_path.join(UPSTREAM_BRANCHES_PATH);
+        if !(local_branches_path.exists() && upstream_branches_path.exists()) {
+            return None;
+        }
+
+        let tracking_set = ContentSet::construct(&relic_path.join(TRACKED_PATH)).ok()?;
+        let ignore_set = ContentSet::construct(&root_path.join(RELIC_IGNORE_PATH)).ok()?;
 
         Some(State {
             root_path,
-            relic_path,
-            branches_path,
             tracking_set,
             ignore_set,
         })
@@ -70,25 +94,42 @@ impl State {
         Err(RelicError::IOError(IOError::FileCantOpen))
     }
 
-    pub fn fetch_head_commit(&self) -> Result<Option<Commit>, RelicError> {
-        // self.fetch_from_commit_file(self.get_head_path())
-        Branch::get_head(self).and_then(|h| h.get_commit(&self.get_sanctum_path()))
+    pub fn fetch_local_head_commit(&self) -> Result<Option<Commit>, RelicError> {
+        Branch::get_head(self, &BranchSource::Local)
+            .and_then(|h| h.get_commit(&self.get_sanctum_path()))
     }
 
-    pub fn fetch_upstream_commit(&self) -> Result<Option<Commit>, RelicError> {
-        self.fetch_from_commit_file(self.get_upstream_path())
+    pub fn fetch_upstream_head_commit(&self) -> Result<Option<Commit>, RelicError> {
+        Branch::get_head(self, &BranchSource::Upstream)
+            .and_then(|h| h.get_commit(&self.get_sanctum_path()))
     }
 
     pub fn update_tracking_set(&self) {
         let _ = fs::write(
-            self.relic_path.join("tracked"),
+            self.get_relic_path().join(TRACKED_PATH),
             self.tracking_set.serialise(),
         );
     }
 
     // #region paths
+    pub fn get_relic_path(&self) -> PathBuf {
+        self.root_path.join(RELIC_PATH)
+    }
+
+    pub fn get_branches_path(&self) -> PathBuf {
+        self.get_relic_path().join(BRANCHES_PATH)
+    }
+
+    pub fn get_local_branches_path(&self) -> PathBuf {
+        self.get_branches_path().join(LOCAL_BRANCHES_PATH)
+    }
+
+    pub fn get_upstream_branches_path(&self) -> PathBuf {
+        self.get_branches_path().join(UPSTREAM_BRANCHES_PATH)
+    }
+
     pub fn get_sanctum_path(&self) -> PathBuf {
-        let s = self.relic_path.join("sanctum");
+        let s = self.get_relic_path().join(SANCTUM_PATH);
         if !s.exists() {
             // TODO: handle exceptions
             fs::create_dir(&s).unwrap();
@@ -97,11 +138,7 @@ impl State {
     }
 
     pub fn get_head_path(&self) -> PathBuf {
-        self.relic_path.join("head")
-    }
-
-    pub fn get_upstream_path(&self) -> PathBuf {
-        self.relic_path.join("upstream")
+        self.get_relic_path().join(HEAD_PATH)
     }
     // #endregion
 }

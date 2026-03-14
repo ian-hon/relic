@@ -19,6 +19,7 @@ impl ContentSet {
     }
 
     pub fn construct(path: &Path) -> Result<ContentSet, RelicError> {
+        // TODO: separate these; creation into another function
         if !path.exists() {
             // create new
             let c = ContentSet::new();

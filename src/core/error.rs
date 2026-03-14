@@ -11,11 +11,15 @@ pub enum RelicError {
 
 #[derive(Debug)]
 pub enum IOError {
+    InternalError,
+
     FileNoExist,
     FileCantOpen,
     FileCantCreate,
     FileCantWrite,
     FileCantDelete,
+    FileCantCopy,
+
     DirectoryNoExist,
     DirectoryCantOpen,
     DirectoryCantCreate,

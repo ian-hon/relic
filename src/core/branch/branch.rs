@@ -1,4 +1,4 @@
-use std::{fs, path::PathBuf, str::FromStr};
+use std::{fs, path::PathBuf};
 
 use crate::core::{
     data::commit::Commit,
@@ -48,15 +48,15 @@ impl Branch {
     // static methods
     // input: name of branch
     // output: branch from branches/
-    pub fn construct_from_name(name: &str, state: &State) -> Option<Branch> {
-        if let Ok(b) = Branch::construct_from_path(&state.branches_path.join(name)) {
+    pub fn construct_from_name(name: &str, state: &State, source: &BranchSource) -> Option<Branch> {
+        if let Ok(b) = Branch::construct_from_path(&source.path(state).join(name)) {
             return Some(b);
         }
         None
     }
 
     // input: path of branch
-    // output: branch from branches/
+    // output: branch from branches/ (path will be branches/local or branches/upstream)
     pub fn construct_from_path(path: &PathBuf) -> Result<Branch, RelicError> {
         // EXPENSIVE!
         if let Some(f) = path.file_name() {
@@ -73,14 +73,14 @@ impl Branch {
         Err(RelicError::IOError(IOError::FileNoExist))
     }
 
-    pub fn get_head(state: &State) -> Result<HeadType, RelicError> {
+    pub fn get_head(state: &State, source: &BranchSource) -> Result<HeadType, RelicError> {
         let file_path = state.get_head_path();
         if !file_path.exists() {
             return Err(RelicError::IOError(IOError::FileNoExist));
         }
 
         if let Ok(s) = fs::read_to_string(file_path) {
-            return HeadType::deserialise(&s, state);
+            return HeadType::deserialise(&s, state, source);
         }
         Err(RelicError::IOError(IOError::FileCantOpen))
     }
@@ -101,11 +101,20 @@ impl Branch {
         ))
     }
 
-    // update head to be a branch
+    // update head to be a local branch
+    // if branch doesnt exist locally,
+    //      clone upstream into local
+    // head = branch.name
     pub fn set_head_branch(name: String, state: &State) -> Option<RelicError> {
         // sets the branch as the main active branch
 
-        if let Some(b) = Branch::construct_from_name(&name, state) {
+        if let None = Branch::construct_from_name(&name, state, &BranchSource::Local) {
+            if let Some(e) = Branch::sync_branches(&name, state, &BranchSource::Upstream) {
+                return Some(e);
+            }
+        }
+
+        if let Some(b) = Branch::construct_from_name(&name, state, &BranchSource::Local) {
             let file_path = state.get_head_path();
             if !file_path.exists() {
                 return Some(RelicError::IOError(IOError::FileNoExist));
@@ -116,19 +125,37 @@ impl Branch {
             }
             return Some(RelicError::IOError(IOError::FileCantWrite));
         }
+        Some(RelicError::BranchError(BranchError::BranchDoesntExist))
+    }
+
+    // sync branch from upstream into local
+    // branches/{opposite}/{name} = branches/{source}/{name}
+    // sets opposite's branch to source's commit oid
+    pub fn sync_branches(name: &str, state: &State, source: &BranchSource) -> Option<RelicError> {
+        let source_path = source.path(state).join(name);
+        let opposite_path = source.opposite().path(state).join(name);
+
+        if source_path.exists() {
+            if let Ok(_) = fs::copy(source_path, opposite_path) {
+                return None;
+            }
+
+            return Some(RelicError::IOError(IOError::FileCantCopy));
+        }
 
         Some(RelicError::BranchError(BranchError::BranchDoesntExist))
     }
 
     // #region CRUD
-    // creates new branch inside branches
+    // creates new branch inside local
     pub fn instantiate(
         name: String,
         head: Option<Commit>,
         state: &State,
+        source: &BranchSource,
     ) -> Result<Option<Branch>, RelicError> {
         // creates new branches/{name}
-        let file_path = state.branches_path.join(&name);
+        let file_path = source.path(state).join(&name);
         if file_path.exists() {
             return Err(RelicError::BranchError(BranchError::BranchExists));
         }
@@ -155,10 +182,10 @@ impl Branch {
     }
 
     // outright deletes the entire branch from branches
-    pub fn delete(name: String, state: &State) -> Option<RelicError> {
+    pub fn delete(name: String, state: &State, source: BranchSource) -> Option<RelicError> {
         // deletes branches/{name}
         // head = remains same
-        let file_path = state.branches_path.join(&name);
+        let file_path = source.path(state).join(&name);
         if !file_path.exists() {
             return Some(RelicError::BranchError(BranchError::BranchDoesntExist));
         }
@@ -175,16 +202,17 @@ impl Branch {
         name: String,
         new_commit: Commit,
         state: &State,
+        source: &BranchSource,
     ) -> Result<Branch, RelicError> {
         // branches/{name} = new_commit.oid
         // head = remains same
-        let file_path = state.branches_path.join(&name);
+        let file_path = source.path(state).join(&name);
         if !file_path.exists() {
             return Err(RelicError::BranchError(BranchError::BranchDoesntExist));
         }
 
         if let Ok(()) = fs::write(file_path, new_commit.oid.to_string()) {
-            if let Some(b) = Branch::construct_from_name(&name, state) {
+            if let Some(b) = Branch::construct_from_name(&name, state, source) {
                 return Ok(b);
             }
             return Err(RelicError::BranchError(BranchError::BranchDoesntExist));
@@ -199,6 +227,26 @@ impl Branch {
     }
 }
 
+pub enum BranchSource {
+    Local,
+    Upstream,
+}
+impl BranchSource {
+    fn path(&self, state: &State) -> PathBuf {
+        match self {
+            BranchSource::Local => state.get_local_branches_path(),
+            BranchSource::Upstream => state.get_upstream_branches_path(),
+        }
+    }
+
+    fn opposite(&self) -> BranchSource {
+        match self {
+            BranchSource::Local => BranchSource::Upstream,
+            BranchSource::Upstream => BranchSource::Local,
+        }
+    }
+}
+
 #[derive(Clone)]
 pub enum HeadType {
     Empty,
@@ -206,7 +254,7 @@ pub enum HeadType {
     Detached(Commit),
 }
 impl HeadType {
-    fn deserialise(s: &str, state: &State) -> Result<HeadType, RelicError> {
+    fn deserialise(s: &str, state: &State, source: &BranchSource) -> Result<HeadType, RelicError> {
         if let Some((delim, name)) = s.split_once("\0") {
             // follows format of
             // branch\0{branch name}
@@ -214,7 +262,7 @@ impl HeadType {
                 return Err(RelicError::ConfigurationIncorrect);
             }
 
-            if let Some(b) = Branch::construct_from_name(name, state) {
+            if let Some(b) = Branch::construct_from_name(name, state, source) {
                 return Ok(HeadType::Branch(b));
             }
         } else {

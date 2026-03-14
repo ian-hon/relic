@@ -3,7 +3,7 @@ use std::path::Path;
 use clap::ArgMatches;
 
 use crate::core::{
-    branch::branch::{Branch, HeadType, DEFAULT_BRANCH},
+    branch::branch::{Branch, BranchSource, HeadType, DEFAULT_BRANCH},
     data::{commit::Commit, tree::Tree},
     error::{IOError, RelicError},
     object::ObjectLike,
@@ -43,7 +43,7 @@ pub fn commit(state: Option<&mut State>, args: &ArgMatches) {
     };
 
     // match state.
-    if let Ok(head) = Branch::get_head(state) {
+    if let Ok(head) = Branch::get_head(state, &BranchSource::Local) {
         match head {
             HeadType::Branch(b) => {
                 // use head as parent
@@ -72,7 +72,10 @@ pub fn commit(state: Option<&mut State>, args: &ArgMatches) {
 
                     println!("writing: {}", c.get_oid().to_string());
 
-                    println!("{:?}", Branch::update_branch(b.name, c, state));
+                    println!(
+                        "{:?}",
+                        Branch::update_branch(b.name, c, state, &BranchSource::Local)
+                    );
                 } else {
                     let c = Commit::new(
                         tree.get_oid(),
@@ -90,7 +93,10 @@ pub fn commit(state: Option<&mut State>, args: &ArgMatches) {
                         c.get_oid().to_string()
                     );
 
-                    println!("{:?}", Branch::update_branch(b.name, c, state));
+                    println!(
+                        "{:?}",
+                        Branch::update_branch(b.name, c, state, &BranchSource::Local)
+                    );
                 }
             }
             HeadType::Detached(_) => {
@@ -116,7 +122,12 @@ pub fn commit(state: Option<&mut State>, args: &ArgMatches) {
                 // println!("{:?}", Branch::update_branch("main".to_string(), c, state));
                 println!(
                     "{:?}",
-                    Branch::instantiate(DEFAULT_BRANCH.to_string(), Some(c), state)
+                    Branch::instantiate(
+                        DEFAULT_BRANCH.to_string(),
+                        Some(c),
+                        state,
+                        &BranchSource::Local
+                    )
                 );
                 println!("setting current head to new branch");
                 Branch::set_head_branch(DEFAULT_BRANCH.to_string(), state);
