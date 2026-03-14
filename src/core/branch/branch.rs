@@ -122,20 +122,33 @@ impl Branch {
 
     // #region CRUD
     // creates new branch inside branches
-    pub fn instantiate(name: String, head: Commit, state: &State) -> Result<Branch, RelicError> {
+    pub fn instantiate(
+        name: String,
+        head: Option<Commit>,
+        state: &State,
+    ) -> Result<Option<Branch>, RelicError> {
         // creates new branches/{name}
         let file_path = state.branches_path.join(&name);
         if file_path.exists() {
             return Err(RelicError::BranchError(BranchError::BranchExists));
         }
 
-        let b = Branch {
-            name,
-            head: head.oid,
-        };
-        if let Ok(_) = fs::write(file_path, head.oid.to_string()) {
-            // if let Ok(_) = fs::write(file_path, HeadType::Branch(b.clone()).to_string()) {
-            return Ok(b);
+        match head {
+            Some(head) => {
+                let b = Branch {
+                    name,
+                    head: head.oid,
+                };
+                if let Ok(_) = fs::write(file_path, head.oid.to_string()) {
+                    // if let Ok(_) = fs::write(file_path, HeadType::Branch(b.clone()).to_string()) {
+                    return Ok(Some(b));
+                }
+            }
+            None => {
+                if let Ok(_) = fs::write(file_path, "") {
+                    return Ok(None);
+                }
+            }
         }
 
         Err(RelicError::Unimplemented)

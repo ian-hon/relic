@@ -116,7 +116,7 @@ pub fn commit(state: Option<&mut State>, args: &ArgMatches) {
                 // println!("{:?}", Branch::update_branch("main".to_string(), c, state));
                 println!(
                     "{:?}",
-                    Branch::instantiate(DEFAULT_BRANCH.to_string(), c, state)
+                    Branch::instantiate(DEFAULT_BRANCH.to_string(), Some(c), state)
                 );
                 println!("setting current head to new branch");
                 Branch::set_head_branch(DEFAULT_BRANCH.to_string(), state);

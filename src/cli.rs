@@ -34,6 +34,7 @@ naively reinvent the wheel."#,
     for (f, c) in HashMap::<CommandType, clap::Command>::from_iter::<
         Vec<(CommandType, clap::Command)>,
     >(vec![
+        //         misc:
         (
             command_module::init,
             Command::new("init").about("Initialises a Relic repository in the current directory."),
@@ -48,6 +49,11 @@ naively reinvent the wheel."#,
         (
             command_module::detach,
             Command::new("detach").about("Completely removes Relic from the current directory."),
+        ),
+        // staging:
+        (
+            command_module::staging,
+            Command::new("staging").about("View all staging changes."),
         ),
         (
             command_module::track,
@@ -71,6 +77,13 @@ naively reinvent the wheel."#,
                         .value_parser(value_parser!(PathBuf)),
                 ),
         ),
+        // pending:
+        (
+            command_module::pending,
+            Command::new("pending")
+                .about("View all pending commits.")
+                .arg(arg!([COMMIT]... "Commit number.")),
+        ),
         (
             command_module::commit,
             Command::new("commit")
@@ -79,6 +92,7 @@ naively reinvent the wheel."#,
                 .arg(arg!(-m --message <MESSAGE> "Commit message").required(true))
                 .arg(arg!(-d --description <DESCRIPTION> "Commit description")),
         ),
+        // remote:
         (
             command_module::push,
             Command::new("push").about("Pushes pending commits to remote."),
@@ -87,19 +101,18 @@ naively reinvent the wheel."#,
             command_module::pull,
             Command::new("pull").about("Pull pending commits from remote to local."),
         ),
+        // branch:
+        (
+            command_module::checkout,
+            Command::new("checkout")
+                .about("Switches to specified branch. Use -n to create new branch if it doesn't exist.")
+                .arg_required_else_help(true)
+                .arg(arg!([BRANCH]... "Branch to change to").required(true))
+                .arg(arg!(-n --new <NEW> "Create new if no exist").action(clap::ArgAction::Count)),
+        ),
         (
             command_module::tree,
             Command::new("tree").about("Generate content tree of current directory."),
-        ),
-        (
-            command_module::staging,
-            Command::new("staging").about("View all staging changes."),
-        ),
-        (
-            command_module::pending,
-            Command::new("pending")
-                .about("View all pending commits.")
-                .arg(arg!([COMMIT]... "Commit number.")),
         ),
         (
             command_module::status,

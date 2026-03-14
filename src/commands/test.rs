@@ -3,6 +3,7 @@ use std::{io::empty, path::Path};
 use clap::ArgMatches;
 
 use crate::core::{
+    branch::branch::{Branch, HeadType},
     data::{
         commit::{Commit, CommitState},
         tree::Tree,
@@ -104,5 +105,14 @@ pub fn test(state: Option<&mut State>, _: &ArgMatches) {
     //     )
     // );
 
-    println!("{:?}", state.fetch_head_commit());
+    // println!("{:?}", state.fetch_head_commit());
+    match Branch::get_head(state).unwrap() {
+        HeadType::Branch(b) => println!(
+            "branch: {}\n{}",
+            b.name.clone(),
+            b.get_commit(&state.get_sanctum_path()).unwrap().as_string()
+        ),
+        HeadType::Detached(c) => println!("detached: {}", c.as_string()),
+        HeadType::Empty => println!("empty"),
+    }
 }

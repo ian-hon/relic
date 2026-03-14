@@ -31,8 +31,13 @@ push
 pull
     pulls commits from remote
 
+branch:
+checkout
+    changes checked out branch to new one, if doesnt exist, creates it
+
 */
 
+pub mod checkout;
 pub mod clone;
 pub mod commit;
 pub mod detach;
@@ -48,6 +53,7 @@ pub mod track;
 pub mod tree;
 pub mod untrack;
 
+pub use checkout::checkout;
 pub use clone::clone;
 pub use commit::commit;
 pub use detach::detach;
