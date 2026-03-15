@@ -2,10 +2,11 @@ use clap::ArgMatches;
 
 use crate::core::{
     branch::branch::{Branch, BranchSource, HeadType},
-    data::commit::Commit,
+    data::{commit::Commit, tree::Tree},
     error::{BranchError, RelicError},
     oid::ObjectID,
     state::State,
+    write,
 };
 
 /*
@@ -43,6 +44,18 @@ pub fn checkout(state: Option<&mut State>, args: &ArgMatches) {
 
         if let Some(e) = Branch::set_head_detached(c, state) {
             println!("Can't checkout commit: {e:?}");
+        }
+
+        if let Ok(h) = Branch::get_head(state, &BranchSource::Local) {
+            if let Ok(Some(c)) = h.get_commit(&state.get_sanctum_path()) {
+                write::write_tree(
+                    &state.root_path.join("playground"),
+                    &state.get_sanctum_path(),
+                    &c.tree
+                        .construct_strict::<Tree>(&state.get_sanctum_path())
+                        .unwrap(),
+                );
+            }
         }
 
         return;
@@ -103,5 +116,17 @@ pub fn checkout(state: Option<&mut State>, args: &ArgMatches) {
             e => println!("Error: {e:?}"),
         },
         None => println!("Successfully changed branch to '{object_name}'."),
+    }
+
+    if let Ok(h) = Branch::get_head(state, &BranchSource::Local) {
+        if let Ok(Some(c)) = h.get_commit(&state.get_sanctum_path()) {
+            write::write_tree(
+                &state.root_path.join("playground"),
+                &state.get_sanctum_path(),
+                &c.tree
+                    .construct_strict::<Tree>(&state.get_sanctum_path())
+                    .unwrap(),
+            );
+        }
     }
 }

@@ -21,3 +21,5 @@ target/
 .relic/
 
 lorem/ipsum/
+
+playground/*

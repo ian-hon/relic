@@ -19,7 +19,11 @@ pub fn write_commit(
     write_tree(destination, sanctum_path, &tree)
 }
 
-fn write_tree(current_path: &PathBuf, sanctum_path: &PathBuf, tree: &Tree) -> Option<RelicError> {
+pub fn write_tree(
+    current_path: &PathBuf,
+    sanctum_path: &PathBuf,
+    tree: &Tree,
+) -> Option<RelicError> {
     let file_iter = match fs::read_dir(current_path) {
         Ok(i) => i,
         Err(_) => return Some(RelicError::IOError(IOError::DirectoryCantOpen)),
