@@ -8,7 +8,7 @@ use crate::core::{
 
 use strum_macros::{Display, EnumString, IntoStaticStr};
 
-#[derive(Debug, Clone, Copy, Display, EnumString, IntoStaticStr)]
+#[derive(Debug, Clone, Copy, PartialEq, Display, EnumString, IntoStaticStr)]
 pub enum ObjectType {
     #[strum(serialize = "T")]
     Tree,
@@ -42,6 +42,14 @@ pub enum Object {
     Commit(Commit),
 }
 impl Object {
+    pub fn object_type(&self) -> ObjectType {
+        match self {
+            Object::Blob(_) => ObjectType::Blob,
+            Object::Tree(_) => ObjectType::Tree,
+            Object::Commit(_) => ObjectType::Commit,
+        }
+    }
+
     pub fn extract_header(payload: &Vec<u8>) -> Option<ObjectType> {
         if payload.len() < 2 {
             panic!("none");
@@ -71,7 +79,41 @@ impl Object {
     }
 }
 
+impl TryFrom<Object> for Blob {
+    type Error = RelicError;
+
+    fn try_from(obj: Object) -> Result<Self, Self::Error> {
+        match obj {
+            Object::Blob(b) => Ok(b),
+            _ => Err(RelicError::ConfigurationIncorrect),
+        }
+    }
+}
+
+impl TryFrom<Object> for Tree {
+    type Error = RelicError;
+
+    fn try_from(obj: Object) -> Result<Self, Self::Error> {
+        match obj {
+            Object::Tree(t) => Ok(t),
+            _ => Err(RelicError::ConfigurationIncorrect),
+        }
+    }
+}
+
+impl TryFrom<Object> for Commit {
+    type Error = RelicError;
+
+    fn try_from(obj: Object) -> Result<Self, Self::Error> {
+        match obj {
+            Object::Commit(c) => Ok(c),
+            _ => Err(RelicError::ConfigurationIncorrect),
+        }
+    }
+}
+
 pub trait ObjectLike {
+    const OBJECT_TYPE: ObjectType;
     fn get_oid(&self) -> ObjectID;
     #[allow(unused)]
     fn as_string(&self) -> String;

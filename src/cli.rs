@@ -107,7 +107,8 @@ naively reinvent the wheel."#,
             Command::new("checkout")
                 .about("Switches to specified branch. Use -n to create new branch if it doesn't exist.")
                 .arg_required_else_help(true)
-                .arg(arg!([BRANCH]... "Branch to change to").required(true))
+                .arg(arg!([OBJECT]... "Branch/commit to checkout").required(true))
+                .arg(arg!(-b --base <BASE> "Branch to base from"))
                 .arg(arg!(-n --new <NEW> "Create new if no exist").action(clap::ArgAction::Count)),
         ),
         (

@@ -1,7 +1,7 @@
 use std::{collections::HashSet, path::Path};
 
 use crate::core::{
-    object::{Object, ObjectLike},
+    object::{Object, ObjectLike, ObjectType},
     oid::ObjectID,
     util::{
         empty_oid, into_human_readable, oid_digest_data, parse_kv_pair, string_to_oid, url_decode,
@@ -151,9 +151,9 @@ description {}",
 
         let pairs = parse_kv_pair(payload, " ");
 
-        let tree = ObjectID::from_string(&pairs.get("tree")?[0]);
+        let tree = ObjectID::from_string(&pairs.get("tree")?[0])?;
         let parent = {
-            let o = string_to_oid(&pairs.get("parent")?[0]);
+            let o = string_to_oid(&pairs.get("parent")?[0])?;
             if o == empty_oid() {
                 None
             } else {
@@ -161,9 +161,12 @@ description {}",
             }
         };
         let surrogates = if let Some(s) = pairs.get("surrogate") {
-            s.iter()
-                .map(|p| ObjectID::new(string_to_oid(p)))
-                .collect::<Vec<ObjectID>>()
+            let r = s.iter().map(|p| ObjectID::from_string(p));
+            if r.clone().all(|i| i.is_some()) {
+                r.map(|i| i.unwrap()).collect()
+            } else {
+                return None;
+            }
         } else {
             vec![]
         };
@@ -333,6 +336,8 @@ description {}",
 }
 
 impl ObjectLike for Commit {
+    const OBJECT_TYPE: ObjectType = ObjectType::Commit;
+
     fn get_oid(&self) -> ObjectID {
         self.oid
     }

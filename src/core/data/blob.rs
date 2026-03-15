@@ -6,7 +6,7 @@ use std::{
 use crate::core::{
     // data::{object::ObjectLike, oid::ObjectID, util::oid_digest_data},
     error::{IOError, RelicError},
-    object::{Object, ObjectLike},
+    object::{Object, ObjectLike, ObjectType},
     oid::ObjectID,
     util::oid_digest_data,
 };
@@ -87,6 +87,8 @@ impl Blob {
 }
 
 impl ObjectLike for Blob {
+    const OBJECT_TYPE: ObjectType = ObjectType::Blob;
+
     fn get_oid(&self) -> ObjectID {
         self.oid.clone() // EXPENSIVE!
     }

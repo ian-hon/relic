@@ -49,10 +49,11 @@ impl Tree {
 
         let mut children = vec![];
 
-        let lines = match payload.strip_prefix(HEADER) {
-            Some(l) => l,
-            None => return None,
-        };
+        // let lines = match payload.strip_prefix(HEADER) {
+        //     Some(l) => l,
+        //     None => return None,
+        // };
+        let lines = payload.strip_prefix(HEADER)?;
         let mut lines = lines.lines();
 
         while let Some(line) = lines.next() {
@@ -67,7 +68,7 @@ impl Tree {
             let file_name = file_name.join(" ");
 
             children.push(TreeEntry {
-                oid: string_to_oid(oid).into(),
+                oid: string_to_oid(oid)?.into(),
                 name: file_name,
                 otype: ObjectType::from_str(otype).ok()?,
             })
@@ -216,6 +217,8 @@ impl Tree {
 }
 
 impl ObjectLike for Tree {
+    const OBJECT_TYPE: ObjectType = ObjectType::Tree;
+
     fn get_oid(&self) -> ObjectID {
         self.oid
     }

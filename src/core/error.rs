@@ -3,10 +3,16 @@ pub enum RelicError {
     IgnoredFile,
     ConfigurationIncorrect,
     Unimplemented,
+    ObjectID(ObjectID),
     BranchError(BranchError),
     IOError(IOError),
     RelicInfo(Box<RelicError>),
     SanctumError(SanctumError),
+}
+
+#[derive(Debug)]
+pub enum ObjectID {
+    InvalidID,
 }
 
 #[derive(Debug)]

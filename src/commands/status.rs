@@ -16,40 +16,42 @@ pub fn status(state: Option<&mut State>, _: &ArgMatches) {
     ) {
         (Ok(h), Ok(u)) => match (h, u) {
             (None, None) | (None, Some(_)) | (Some(_), None) => {
-                println!("no pending commits");
+                println!("No pending commits.");
                 return;
             }
             (Some(head), Some(upstream)) => {
                 match Commit::get_state(upstream, head, &state.get_sanctum_path()) {
                     CommitState::Ahead(v) => {
-                        println!("local is ahead by {} commits", v.len());
+                        println!("Local is ahead by {} commits.", v.len());
                         for c in v {
                             println!("{}", c.get_nickname());
                         }
                     }
                     CommitState::Behind(v) => {
-                        println!("local is behind by {} commits", v.len());
+                        println!("Local is behind by {} commits.", v.len());
                         for c in v {
                             println!("{}", c.get_nickname());
                         }
                     }
                     CommitState::Tie => {
-                        println!("local is up to date with upstream");
+                        println!("Local is up to date with upstream.");
                     }
                     CommitState::Conflict(ancestor) => {
                         println!(
-                            "conflict between local and upstream. last common ancestor:\n{}",
+                            "Divergence between local and upstream. Last common ancestor:\n{}",
                             ancestor.get_nickname()
                         );
                     }
                     CommitState::None => {
-                        println!("upstream and local are not related. is your relic configuration corrupted?");
+                        println!("Upstream and local are not related. Is your relic configuration corrupted?");
                     }
                 }
             }
         },
         _ => {
-            println!("cant seem to get upstream or head. is your relic configuration corrupted?")
+            println!(
+                "Cant seem to get either upstream or head. Is your relic configuration corrupted?"
+            )
         }
     }
 }

@@ -6,7 +6,7 @@ use std::{
 use crate::core::{
     data::{blob::Blob, commit::Commit, tree::Tree},
     error::{IOError, RelicError, SanctumError},
-    object::{Object, ObjectType},
+    object::{Object, ObjectLike, ObjectType},
     util::{empty_oid, oid_to_string, string_to_oid},
 };
 
@@ -17,8 +17,8 @@ impl ObjectID {
         ObjectID(oid)
     }
 
-    pub fn from_string(content: &str) -> ObjectID {
-        ObjectID(string_to_oid(content))
+    pub fn from_string(content: &str) -> Option<ObjectID> {
+        string_to_oid(content).and_then(|o| Some(ObjectID(o)))
     }
 
     pub fn get_segments(&self) -> (String, String) {
@@ -40,6 +40,18 @@ impl ObjectID {
 
     pub fn empty() -> ObjectID {
         ObjectID(empty_oid())
+    }
+
+    pub fn construct_strict<T>(&self, sanctum_path: &Path) -> Option<T>
+    where
+        T: ObjectLike + TryFrom<Object>,
+    {
+        let item = self.construct(sanctum_path).ok()?;
+        if item.object_type() == T::OBJECT_TYPE {
+            T::try_from(item).ok()
+        } else {
+            None
+        }
     }
 
     pub fn construct(&self, sanctum_path: &Path) -> Result<Object, RelicError> {

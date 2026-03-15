@@ -79,7 +79,11 @@ impl State {
                 return Ok(None);
             }
 
-            let oid_raw: ObjectID = string_to_oid(str::from_utf8(&oid_raw).unwrap()).into();
+            // let oid_raw: ObjectID = string_to_oid(str::from_utf8(&oid_raw).unwrap()).into();
+            let oid_raw = match ObjectID::from_string(str::from_utf8(&oid_raw).unwrap()) {
+                Some(o) => o,
+                None => return Err(RelicError::ObjectID(super::error::ObjectID::InvalidID)),
+            };
 
             match oid_raw.construct(&self.get_sanctum_path()) {
                 Ok(c) => {

@@ -2,7 +2,7 @@ use std::{fs, path::PathBuf};
 
 use crate::core::{
     data::commit::Commit,
-    error::{BranchError, IOError, RelicError},
+    error::{self, BranchError, IOError, RelicError},
     object::Object,
     oid::ObjectID,
     state::State,
@@ -46,7 +46,7 @@ impl Branch {
     // }
 
     // static methods
-    // input: name of branch
+    // input: name of branch + source
     // output: branch from branches/
     pub fn construct_from_name(name: &str, state: &State, source: &BranchSource) -> Option<Branch> {
         if let Ok(b) = Branch::construct_from_path(&source.path(state).join(name)) {
@@ -63,14 +63,26 @@ impl Branch {
             let name = f.to_string_lossy().to_string();
 
             if let Ok(content) = fs::read_to_string(path) {
-                let oid = ObjectID::from_string(&content);
-
-                return Ok(Branch { name, head: oid });
+                if let Some(oid) = ObjectID::from_string(&content) {
+                    return Ok(Branch { name, head: oid });
+                }
+                return Err(RelicError::ObjectID(error::ObjectID::InvalidID));
             }
 
             return Err(RelicError::IOError(IOError::FileCantOpen));
         }
         Err(RelicError::IOError(IOError::FileNoExist))
+    }
+
+    // input: name of branch
+    // output: a vec of all sources (+branch) where the branch exists
+    pub fn construct_from_name_all(state: &State, name: &str) -> Vec<(Branch, BranchSource)> {
+        vec![BranchSource::Local, BranchSource::Upstream]
+            .into_iter()
+            .map(|s| (Branch::construct_from_name(name, state, &s), s))
+            .filter(|i| i.0.is_some())
+            .map(|s| (s.0.unwrap(), s.1))
+            .collect()
     }
 
     pub fn get_head(state: &State, source: &BranchSource) -> Result<HeadType, RelicError> {
@@ -181,7 +193,7 @@ impl Branch {
         Err(RelicError::Unimplemented)
     }
 
-    // outright deletes the entire branch from branches
+    // outright deletes the entire branch from local branch
     pub fn delete(name: String, state: &State, source: BranchSource) -> Option<RelicError> {
         // deletes branches/{name}
         // head = remains same
@@ -271,8 +283,8 @@ impl HeadType {
             } else {
                 // is detached
                 // s is raw oid
-                if let Ok(Object::Commit(c)) =
-                    ObjectID::from_string(s).construct(&state.get_sanctum_path())
+                if let Some(Ok(Object::Commit(c))) = ObjectID::from_string(s)
+                    .and_then(|o| Some(o.construct(&state.get_sanctum_path())))
                 {
                     return Ok(HeadType::Detached(c));
                 }
