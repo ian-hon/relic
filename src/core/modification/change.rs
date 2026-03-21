@@ -11,7 +11,7 @@ use crate::core::{
         blob::Blob,
         tree::{self, Tree, TreeEntry},
     },
-    modification,
+    modification::{self, utils},
     object::Object,
 };
 
@@ -36,85 +36,97 @@ impl Change {
         blobs
     }
 
-    pub fn as_human_readable(&self, current_upstream: &Tree) -> String {
+    pub fn as_human_readable(&self, tree: &Tree, sanctum_path: &PathBuf) -> String {
+        // To get the human readable output, both the change and the tree must be supplied
+        /*
+            {full change}
+
+            repo_name
+             ├ (+) saturn
+             ├ (-) jupiter
+             └ huh/mod.rs [+11, -52]
+
+            x files affected, x additions, x deletions
+
+            Changes need to be applied to tree, so that files
+            being created are visible, and files deleted still show up.
+            Eg:
+                Changes: (+)saturn, (-)jupiter
+                Tree will be children = {..., jupiter}
+                After apply, will be  = {..., saturn, jupiter}
+                Then, can format properly. If not, certain files and etc will not show up
+
+                As a result, changes applied are filtered to include only ones that create, not delete
+        */
+
         // // HashMap<String, HashSet<modifications::Tree>>,
         // // HashMap<String, HashMap<String, Vec<modifications::Blob>>>,
 
-        // let mut changes = self.clone();
-        // println!("{:?}", self.trees);
-        // changes.trees = changes
-        //     .trees
-        //     .clone()
-        //     .into_iter()
-        //     .filter(|t| match t {
-        //         modification::Tree::DeleteBlob(_, _) | modification::Tree::DeleteTree(_, _) => {
-        //             false
-        //         }
-        //         _ => true,
-        //     })
-        //     .collect::<Vec<modification::Tree>>();
-        // println!("{:?}", self.trees);
+        let mut changes = self.clone();
+        println!("{:?}", self.trees);
+        changes.trees = changes
+            .trees
+            .clone()
+            .into_iter()
+            .filter(|t| match t {
+                modification::Tree::DeleteBlob(_, _) | modification::Tree::DeleteTree(_, _) => {
+                    false
+                }
+                _ => true,
+            })
+            .collect::<Vec<modification::Tree>>();
+        println!("{:?}", self.trees);
 
-        // let (tree_map, blob_map) = self.as_map();
+        let (tree_map, blob_map) = self.as_map();
 
         // let mut current_upstream = current_upstream.clone();
         // current_upstream.apply_changes(&changes);
 
-        // /*
-        //     {full change}
+        let affected_files = blob_map
+            .iter()
+            .map(|(_, v)| v.keys().count())
+            .sum::<usize>();
 
-        //     repo_name
-        //      ├ (+) saturn
-        //      ├ (-) jupiter
-        //      └ huh/mod.rs [+11, -52]
+        let addition = blob_map
+            .iter()
+            .map(|(_, v)| {
+                v.iter()
+                    .map(|(_, b)| {
+                        b.iter()
+                            .filter(|i| match i {
+                                modification::Blob::Create(_, _, _, _) => true,
+                                _ => false,
+                            })
+                            .count()
+                    })
+                    .sum::<usize>()
+            })
+            .sum::<usize>();
 
-        //     x files affected, x additions, x deletions
-        // */
-        // let affected_files = blob_map
-        //     .iter()
-        //     .map(|(_, v)| v.keys().count())
-        //     .sum::<usize>();
+        let deletion = blob_map
+            .iter()
+            .map(|(_, v)| {
+                v.iter()
+                    .map(|(_, b)| {
+                        b.iter()
+                            .filter(|i| match i {
+                                modification::Blob::Delete(_, _, _, _) => true,
+                                _ => false,
+                            })
+                            .count()
+                    })
+                    .sum::<usize>()
+            })
+            .sum::<usize>();
 
-        // let addition = blob_map
-        //     .iter()
-        //     .map(|(_, v)| {
-        //         v.iter()
-        //             .map(|(_, b)| {
-        //                 b.iter()
-        //                     .filter(|i| match i {
-        //                         modification::Blob::Create(_, _, _, _) => true,
-        //                         _ => false,
-        //                     })
-        //                     .count()
-        //             })
-        //             .sum::<usize>()
-        //     })
-        //     .sum::<usize>();
-
-        // let deletion = blob_map
-        //     .iter()
-        //     .map(|(_, v)| {
-        //         v.iter()
-        //             .map(|(_, b)| {
-        //                 b.iter()
-        //                     .filter(|i| match i {
-        //                         modification::Blob::Delete(_, _, _, _) => true,
-        //                         _ => false,
-        //                     })
-        //                     .count()
-        //             })
-        //             .sum::<usize>()
-        //     })
-        //     .sum::<usize>();
-
-        // format!(
-        //     "{}\n\n{}\n\n{affected_files} files affected, {} additions, {} deletions",
-        //     self.serialise_changes(),
-        //     utils::generate_blame_tree(&current_upstream, &tree_map, &blob_map),
-        //     addition,
-        //     deletion
-        // )
-        unimplemented!()
+        format!(
+            "{}\n\n{}\n\n{affected_files} files affected, {} additions, {} deletions",
+            self.serialise_changes(),
+            utils::generate_blame_tree(&tree, sanctum_path, &tree_map, &blob_map),
+            addition,
+            deletion
+        )
+        // unimplemented!()
     }
 
     pub fn as_map(

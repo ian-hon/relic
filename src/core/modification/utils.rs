@@ -1,151 +1,162 @@
-// use std::{
-//     collections::{HashMap, HashSet},
-//     path::PathBuf,
-//     time::{Duration, SystemTime, UNIX_EPOCH},
-// };
+use std::{
+    collections::{HashMap, HashSet},
+    path::PathBuf,
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
 
-// use chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc};
 
-// // use crate::core::{modifications, Blob, Content, Tree};
-// use crate::core::{
-//     modification::{self, Blob, Tree},
-//     object::Object,
-// };
+// use crate::core::{modifications, Blob, Content, Tree};
+use crate::core::{
+    data::tree::{Tree, TreeEntry},
+    modification,
+    object::Object,
+};
 
-// // impl Blob {
-// //     pub fn get_blame_header(
-// //         &self,
-// //         modifications: &HashMap<String, bool>,
-// //         blob_info: &Vec<modification::Blob>,
-// //     ) -> String {
-// //         // returns:
-// //         // (-) earth
-// //         // (+) mars
-// //         // venus [+10, -10]
+impl TreeEntry {
+    pub fn blob_blame_header(
+        &self,
+        modifications: &HashMap<String, bool>,
+        blob_info: &Vec<modification::Blob>,
+    ) -> String {
+        // returns:
+        // (-) earth
+        // (+) mars
+        // venus [+10, -10]
 
-// //         let mod_type: Option<bool> = modifications.get(&self.name).copied();
+        let mod_type: Option<bool> = modifications.get(&self.name).copied();
 
-// //         format!(
-// //             "{}{} {}",
-// //             match mod_type {
-// //                 Some(m) => {
-// //                     if m {
-// //                         "(+) "
-// //                     } else {
-// //                         "(-) "
-// //                     }
-// //                 }
-// //                 None => "",
-// //             },
-// //             self.name.clone(),
-// //             if blob_info.is_empty() {
-// //                 "".to_string()
-// //             } else {
-// //                 format!(
-// //                     "[+{}, -{}]",
-// //                     blob_info
-// //                         .iter()
-// //                         .filter(|b| match b {
-// //                             modification::Blob::Create(_, _, _, _) => true,
-// //                             _ => false,
-// //                         })
-// //                         .count(),
-// //                     blob_info
-// //                         .iter()
-// //                         .filter(|b| match b {
-// //                             modification::Blob::Delete(_, _, _, _) => true,
-// //                             _ => false,
-// //                         })
-// //                         .count(),
-// //                 )
-// //             }
-// //         )
-// //     }
-// // }
+        format!(
+            "{}{} {}",
+            match mod_type {
+                Some(m) => {
+                    if m {
+                        "(+) "
+                    } else {
+                        "(-) "
+                    }
+                }
+                None => "",
+            },
+            self.name.clone(),
+            if blob_info.is_empty() {
+                "".to_string()
+            } else {
+                format!(
+                    "[+{}, -{}]",
+                    blob_info
+                        .iter()
+                        .filter(|b| match b {
+                            modification::Blob::Create(_, _, _, _) => true,
+                            _ => false,
+                        })
+                        .count(),
+                    blob_info
+                        .iter()
+                        .filter(|b| match b {
+                            modification::Blob::Delete(_, _, _, _) => true,
+                            _ => false,
+                        })
+                        .count(),
+                )
+            }
+        )
+    }
+}
 
-// pub fn generate_blame_tree(
-//     tree: &Tree,
-//     tree_map: &HashMap<String, HashSet<modification::Tree>>,
-//     blob_map: &HashMap<String, HashMap<String, Vec<modification::Blob>>>,
-// ) -> String {
-//     return generate_blame_subtree(
-//         &Object::Tree(tree.clone()),
-//         PathBuf::from("."),
-//         tree_map,
-//         blob_map,
-//     );
-// }
+pub fn generate_blame_tree(
+    tree: &Tree,
+    sanctum_path: &PathBuf,
+    tree_map: &HashMap<String, HashSet<modification::Tree>>,
+    blob_map: &HashMap<String, HashMap<String, Vec<modification::Blob>>>,
+) -> String {
+    return generate_blame_subtree(
+        // &Object::Tree(tree.clone()),
+        &TreeEntry {
+            oid: tree.oid,
+            name: "".to_string(),
+            otype: crate::core::object::ObjectType::Tree,
+        },
+        &PathBuf::from("."),
+        sanctum_path,
+        tree_map,
+        blob_map,
+    );
+}
 
-// pub fn generate_blame_subtree(
-//     c: &Object,
-//     path: PathBuf,
-//     tree_map: &HashMap<String, HashSet<modification::Tree>>,
-//     blob_map: &HashMap<String, HashMap<String, Vec<modification::Blob>>>,
-// ) -> String {
-//     let mut result = vec![];
+pub fn generate_blame_subtree(
+    entry: &TreeEntry,
+    path: &PathBuf,
+    sanctum_path: &PathBuf,
+    tree_map: &HashMap<String, HashSet<modification::Tree>>,
+    blob_map: &HashMap<String, HashMap<String, Vec<modification::Blob>>>,
+) -> String {
+    let mut result = vec![];
 
-//     let modifications =
-//         tree_map
-//             .get(&path.to_string_lossy().to_string())
-//             .map_or(HashMap::new(), |h| {
-//                 h.into_iter()
-//                     .map(|v| match v {
-//                         modification::Tree::CreateTree(_, n)
-//                         | modification::Tree::CreateBlob(_, n) => (n.to_string(), true),
-//                         modification::Tree::DeleteTree(_, n)
-//                         | modification::Tree::DeleteBlob(_, n) => (n.to_string(), false),
-//                     })
-//                     .collect::<HashMap<String, bool>>()
-//             });
+    let modifications =
+        tree_map
+            .get(&path.to_string_lossy().to_string())
+            .map_or(HashMap::new(), |h| {
+                h.into_iter()
+                    .map(|v| match v {
+                        modification::Tree::CreateTree(_, n)
+                        | modification::Tree::CreateBlob(_, n) => (n.to_string(), true),
+                        modification::Tree::DeleteTree(_, n)
+                        | modification::Tree::DeleteBlob(_, n) => (n.to_string(), false),
+                    })
+                    .collect::<HashMap<String, bool>>()
+            });
 
-//     match c {
-//         Object::Tree(t) => {
-//             let name = t.name.clone();
-//             let mut r = vec![name];
-//             if t.content.len() >= 1 {
-//                 let length = t.content.len() - 1;
-//                 for (index, i) in t.content.iter().enumerate() {
-//                     let mut p = path.clone();
-//                     if !t.name.is_empty() {
-//                         p = path.join(t.name.clone());
-//                     }
-//                     for (inner_index, line) in generate_blame_subtree(i, p, tree_map, blob_map)
-//                         .split("\n")
-//                         .enumerate()
-//                     {
-//                         r.push(format!(
-//                             " {} {line}",
-//                             if index == length {
-//                                 if inner_index == 0 {
-//                                     "└"
-//                                 } else {
-//                                     ""
-//                                 }
-//                             } else {
-//                                 if inner_index == 0 {
-//                                     "├"
-//                                 } else {
-//                                     "│"
-//                                 }
-//                             }
-//                         ));
-//                     }
-//                 }
-//             }
-//             result.push(r.join("\n"));
-//         }
-//         Object::Blob(b) => {
-//             let blob_info = blob_map
-//                 .get(&path.to_string_lossy().to_string())
-//                 .map_or(vec![], |m| m.get(&b.name).unwrap_or(&vec![]).to_vec());
+    match entry.oid.construct(sanctum_path) {
+        Ok(Object::Tree(t)) => {
+            let name = entry.name.clone();
+            let mut r = vec![name];
+            if t.children.len() >= 1 {
+                let length = t.children.len() - 1;
+                for (index, i) in t.children.iter().enumerate() {
+                    let mut p = path.clone();
+                    if !entry.name.is_empty() {
+                        p = path.join(entry.name.clone());
+                    }
+                    for (inner_index, line) in
+                        generate_blame_subtree(i, &p, sanctum_path, tree_map, blob_map)
+                            .split("\n")
+                            .enumerate()
+                    {
+                        r.push(format!(
+                            " {} {line}",
+                            if index == length {
+                                if inner_index == 0 {
+                                    "└"
+                                } else {
+                                    ""
+                                }
+                            } else {
+                                if inner_index == 0 {
+                                    "├"
+                                } else {
+                                    "│"
+                                }
+                            }
+                        ));
+                    }
+                }
+            }
+            result.push(r.join("\n"));
+        }
+        Ok(Object::Blob(b)) => {
+            let blob_info = blob_map
+                .get(&path.to_string_lossy().to_string())
+                .map_or(vec![], |m| m.get(&entry.name).unwrap_or(&vec![]).to_vec());
 
-//             result.push(b.get_blame_header(&modifications, &blob_info));
-//             // result.push(format!("{} ({})", b.name, sha256::digest(&b.content)));
-//         }
-//     }
+            result.push(entry.blob_blame_header(&modifications, &blob_info));
+            // result.push(format!("{} ({})", b.name, sha256::digest(&b.content)));
+        }
+        _ => unimplemented!(),
+    }
 
-//     result.join("\n")
-// }
+    result.join("\n")
+}
 
 // pub fn generate_tree(tree: &Tree) -> String {
 //     return generate_subtree(&Content::Tree(tree.clone()));

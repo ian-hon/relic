@@ -164,7 +164,10 @@ pub fn test(state: Option<&mut State>, _: &ArgMatches) {
             .unwrap();
 
     let change = Change::get_change_all(&a, &b, &state.get_sanctum_path(), &state.root_path);
-    println!("{}", change.serialise_changes());
+    println!(
+        "{}",
+        change.as_human_readable(&b, &state.get_sanctum_path())
+    );
 
     // println!("{}", a.get_body_as_string().unwrap());
     // println!("{}", b.get_body_as_string().unwrap());
