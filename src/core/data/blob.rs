@@ -25,11 +25,26 @@ pub struct Blob {
     pub payload: Vec<u8>,
 }
 impl Blob {
+    pub fn empty() -> Blob {
+        // TODO: consider a less hacky solution
+        // WILL NOT BE WRITTEN TO SANCTUM
+        // USED ONLY FOR DIFFING
+
+        let payload = HEADER.as_bytes()[..].to_vec();
+
+        let b = Blob {
+            oid: ObjectID::new(oid_digest_data(&payload)),
+            payload,
+        };
+
+        b
+    }
+
     pub fn new(mut raw: Vec<u8>, sanctum_path: &Path) -> Blob {
         // raw does NOT contain header
         // raw contains ONLY the raw data
 
-        // TODO: test
+        // EXPENSIVE!
         let mut payload = HEADER.as_bytes()[..].to_vec();
         payload.append(&mut raw);
 
@@ -74,6 +89,16 @@ impl Blob {
         // get_body used only in as_string
         // as_string not used anywhere
         Object::extract_body(&self.payload)
+    }
+
+    pub fn get_body_as_string(&self) -> Option<String> {
+        match self
+            .get_body()
+            .and_then(|b| str::from_utf8(&b).ok().and_then(|x| Some(x.to_string())))
+        {
+            Some(s) => Some(s),
+            None => panic!("{}", self.oid.to_string()),
+        }
     }
 
     pub fn build_blob(path: &Path, sanctum_path: &Path) -> Result<Blob, RelicError> {

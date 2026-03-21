@@ -1,13 +1,19 @@
-use std::{io::empty, path::Path};
+use std::{
+    io::empty,
+    path::{Path, PathBuf},
+};
 
 use clap::ArgMatches;
+use similar::{ChangeTag, TextDiff};
 
 use crate::core::{
     branch::branch::{Branch, BranchSource, HeadType},
     data::{
+        blob::Blob,
         commit::{Commit, CommitState},
         tree::Tree,
     },
+    modification::change::Change,
     object::{Object, ObjectLike},
     oid::ObjectID,
     state::State,
@@ -106,13 +112,88 @@ pub fn test(state: Option<&mut State>, _: &ArgMatches) {
     // );
 
     // println!("{:?}", state.fetch_head_commit());
-    match Branch::get_head(state, &BranchSource::Local).unwrap() {
-        HeadType::Branch(b) => println!(
-            "branch: {}\n{}",
-            b.name.clone(),
-            b.get_commit(&state.get_sanctum_path()).unwrap().as_string()
-        ),
-        HeadType::Detached(c) => println!("detached: {}", c.as_string()),
-        HeadType::Empty => println!("empty"),
-    }
+    // match Branch::get_head(state, &BranchSource::Local).unwrap() {
+    //     HeadType::Branch(b) => println!(
+    //         "branch: {}\n{}",
+    //         b.name.clone(),
+    //         b.get_commit(&state.get_sanctum_path()).unwrap().as_string()
+    //     ),
+    //     HeadType::Detached(c) => println!("detached: {}", c.as_string()),
+    //     HeadType::Empty => println!("empty"),
+    // }
+
+    // 162436b5a034e432657cc2f44c089beedeeed9b40a23aa8c4111c33b38623194 state.rs
+    // ca801104c3ca1974985cd4d12f0988dd5bd803b656aaeb7751dc835648533240 oid.rs
+
+    // match Branch::get_head(state, &BranchSource::Local).unwrap() {
+    //     HeadType::Branch(b) => {
+    //         let c = b.get_commit(&state.get_sanctum_path()).unwrap();
+
+    //         let t = c
+    //             .tree
+    //             .construct_strict::<Tree>(&state.get_sanctum_path())
+    //             .unwrap();
+    //         t.traverse(
+    //             &state.get_sanctum_path(),
+    //             PathBuf::new(),
+    //             &|path, t, o| {
+    //                 let oid = match &o {
+    //                     Object::Blob(b) => b.oid,
+    //                     Object::Tree(b) => b.oid,
+    //                     Object::Commit(b) => b.oid,
+    //                 };
+    //                 println!("{} - {path:?} ({:?})", oid.to_string(), o.object_type());
+    //             },
+    //             &t,
+    //         );
+    //     }
+    //     _ => {}
+    // }
+
+    // return;
+
+    let a =
+        ObjectID::from_string("5517d4ed1fc4048a6097ebdf4f290f216aebf9b1a1c22fad0a01ce47c6245611")
+            .unwrap()
+            .construct_strict::<Tree>(&state.get_sanctum_path())
+            .unwrap();
+    let b =
+        ObjectID::from_string("7f8e41b14f39fc3c712e6b98423e41a44780fa076a38b4ffcc405242beff2202")
+            .unwrap()
+            .construct_strict::<Tree>(&state.get_sanctum_path())
+            .unwrap();
+
+    let change = Change::get_change_all(&a, &b, &state.get_sanctum_path(), &state.root_path);
+    println!("{}", change.serialise_changes());
+
+    // println!("{}", a.get_body_as_string().unwrap());
+    // println!("{}", b.get_body_as_string().unwrap());
+
+    // let upstream = format!("{}\n", b.get_body_as_string().unwrap());
+    // let current = format!("{}\n", a.get_body_as_string().unwrap());
+
+    // let diff = TextDiff::from_lines(&upstream, &current);
+
+    // for change in diff.iter_all_changes().filter_map(|c| match c.tag() {
+    //     ChangeTag::Equal => None,
+    //     _ => Some(c),
+    // }) {
+    //     match change.tag() {
+    //         ChangeTag::Delete => {
+    //             println!(
+    //                 "- {} {}",
+    //                 change.old_index().unwrap(),
+    //                 change.to_string().strip_suffix("\n").unwrap().to_string()
+    //             );
+    //         }
+    //         ChangeTag::Insert => {
+    //             println!(
+    //                 "+{} {}",
+    //                 change.new_index().unwrap(),
+    //                 change.to_string().strip_suffix("\n").unwrap().to_string()
+    //             );
+    //         }
+    //         _ => panic!("Unmatched change type: {}", change),
+    //     }
+    // }
 }

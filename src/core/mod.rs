@@ -4,6 +4,7 @@ pub mod util;
 pub mod object;
 pub mod oid;
 
+pub mod modification;
 pub mod tracking;
 
 pub mod write;

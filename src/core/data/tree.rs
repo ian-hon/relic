@@ -1,8 +1,9 @@
+use std::path::PathBuf;
 use std::str::FromStr;
 use std::{fs, path::Path};
 
 use crate::core::error::IOError;
-use crate::core::object::{ObjectLike, ObjectType};
+use crate::core::object::{Object, ObjectLike, ObjectType};
 use crate::core::oid::ObjectID;
 use crate::core::state::State;
 use crate::core::util::{empty_oid, oid_digest, oid_digest_data, string_to_oid};
@@ -22,13 +23,27 @@ B hash {blob_name}
 
 const HEADER: &str = "T\0";
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Tree {
     pub oid: ObjectID,
     pub children: Vec<TreeEntry>,
 }
 
 impl Tree {
+    pub fn empty() -> Tree {
+        // TODO: consider a less hacky solution
+        // WILL NOT BE WRITTEN TO SANCTUM
+        // USED ONLY FOR DIFFING
+        let mut t = Tree {
+            oid: empty_oid().into(),
+            children: vec![],
+        };
+
+        t.oid = oid_digest_data(&t.serialise()).into();
+
+        t
+    }
+
     fn from_children(children: Vec<TreeEntry>, sanctum_path: &Path) -> Tree {
         let mut t = Tree {
             // oid: oid_digest(&Tree::string_from_children(&children)).into(),
@@ -135,6 +150,11 @@ impl Tree {
                             continue;
                         }
 
+                        // TOOD: add fix for this
+                        if file_name.eq(".DS_Store") {
+                            continue;
+                        }
+
                         match Blob::build_blob(&file_path, sanctum_path) {
                             Ok(b) => {
                                 children.push(TreeEntry {
@@ -186,7 +206,9 @@ impl Tree {
         Ok(Tree::from_children(children, sanctum_path))
     }
 
-    // pub fn construct_children() ->
+    // pub fn iter_children(&self, sanctum_path: &Path) {
+    //     self.children.iter().map(|x| x.oid.construct_strict(sanctum_path))
+    // }
 
     fn string_from_children(children: &Vec<TreeEntry>) -> String {
         // format:
@@ -214,6 +236,47 @@ impl Tree {
             .as_bytes()
             .to_vec()
     }
+
+    pub fn traverse<F>(
+        &self,
+        sanctum_path: &Path,
+        current_path: PathBuf,
+        func: &F,
+        parent: &Tree,
+    ) -> Option<RelicError>
+    where
+        // current path, parent tree, current content
+        F: Fn(&PathBuf, &Tree, Object),
+    {
+        let c = self.clone();
+
+        // EXPENSIVE!
+        func(&current_path, &parent, Object::Tree(c));
+
+        for (entry, child) in &mut self
+            .children
+            .iter()
+            .map(|c| (c, c.oid.construct(sanctum_path)))
+        {
+            match child {
+                Ok(o) => match o {
+                    Object::Blob(b) => {
+                        func(&current_path.join(&entry.name), self, Object::Blob(b));
+                    }
+                    Object::Tree(t) => {
+                        if let Some(e) =
+                            t.traverse(sanctum_path, current_path.join(&entry.name), func, self)
+                        {
+                            return Some(e);
+                        }
+                    }
+                    Object::Commit(_) => return Some(RelicError::ConfigurationIncorrect),
+                },
+                Err(e) => return Some(e),
+            }
+        }
+        None
+    }
 }
 
 impl ObjectLike for Tree {
@@ -234,7 +297,7 @@ impl ObjectLike for Tree {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TreeEntry {
     pub oid: ObjectID,
     pub name: String, // use OsString instead?
