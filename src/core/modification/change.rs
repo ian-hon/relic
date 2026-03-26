@@ -11,14 +11,36 @@ use crate::core::{
         blob::Blob,
         tree::{self, Tree, TreeEntry},
     },
-    modification::{self, utils},
+    modification::{self, blob::BlobOpInfo, utils, TreeOpInfo, TreeType},
     object::Object,
 };
 
+#[derive(Debug, Clone, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub enum ModOp {
+    Create,
+    Delete,
+}
+impl ModOp {
+    pub fn get_notation(&self) -> &str {
+        match self {
+            ModOp::Create => "+",
+            ModOp::Delete => "-",
+        }
+    }
+
+    pub fn from_notation(n: &str) -> Option<ModOp> {
+        match n {
+            "+" => Some(ModOp::Create),
+            "-" => Some(ModOp::Delete),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Change {
-    pub trees: Vec<modification::Tree>,
-    pub blobs: Vec<modification::Blob>,
+    pub trees: Vec<modification::TreeOp>,
+    pub blobs: Vec<modification::BlobOp>,
 }
 impl Change {
     pub fn empty() -> Change {
@@ -68,13 +90,11 @@ impl Change {
             .trees
             .clone()
             .into_iter()
-            .filter(|t| match t {
-                modification::Tree::DeleteBlob(_, _) | modification::Tree::DeleteTree(_, _) => {
-                    false
-                }
+            .filter(|t| match t.mod_op {
+                ModOp::Delete => false,
                 _ => true,
             })
-            .collect::<Vec<modification::Tree>>();
+            .collect::<Vec<modification::TreeOp>>();
         println!("{:?}", self.trees);
 
         let (tree_map, blob_map) = self.as_map();
@@ -93,8 +113,8 @@ impl Change {
                 v.iter()
                     .map(|(_, b)| {
                         b.iter()
-                            .filter(|i| match i {
-                                modification::Blob::Create(_, _, _, _) => true,
+                            .filter(|o| match o.mod_op {
+                                ModOp::Create => true,
                                 _ => false,
                             })
                             .count()
@@ -109,8 +129,8 @@ impl Change {
                 v.iter()
                     .map(|(_, b)| {
                         b.iter()
-                            .filter(|i| match i {
-                                modification::Blob::Delete(_, _, _, _) => true,
+                            .filter(|o| match o.mod_op {
+                                ModOp::Delete => true,
                                 _ => false,
                             })
                             .count()
@@ -132,46 +152,28 @@ impl Change {
     pub fn as_map(
         &self,
     ) -> (
-        HashMap<String, HashSet<modification::Tree>>,
-        HashMap<String, HashMap<String, Vec<modification::Blob>>>,
+        HashMap<String, HashSet<modification::TreeOp>>,
+        HashMap<String, HashMap<String, Vec<modification::BlobOp>>>,
     ) {
         // tree_map: map<parent_directory, Vec<changes>>
         // blob_map: map<parent_directory, map<file_name, Vec<changes>>>
 
         let mut tree_map = HashMap::new();
-        for tree_modification in &self.trees {
-            let path = match tree_modification {
-                modification::Tree::CreateTree(path, _)
-                | modification::Tree::DeleteTree(path, _)
-                | modification::Tree::CreateBlob(path, _)
-                | modification::Tree::DeleteBlob(path, _) => path.clone(),
-            };
-
-            assert_eq!(path, tree_modification.extract_data().0);
-
+        for tree_op in &self.trees {
             tree_map
-                .entry(path)
+                .entry(tree_op.info.parent.clone())
                 .or_insert(HashSet::new())
-                .insert(tree_modification.clone());
+                .insert(tree_op.clone());
         }
 
         let mut blob_map = HashMap::new();
-        for blob_modification in &self.blobs {
-            let (parent_directory, file_name) = match blob_modification {
-                modification::Blob::Create(path, name, _, _) => (path.clone(), name.clone()),
-                modification::Blob::Delete(path, name, _, _) => (path.clone(), name.clone()),
-            };
-
-            assert_eq!(
-                (parent_directory.clone(), file_name.clone()),
-                blob_modification.extract_path()
-            );
+        for blob_op in &self.blobs {
             blob_map
-                .entry(parent_directory)
+                .entry(blob_op.info.parent.clone())
                 .or_insert(HashMap::new())
-                .entry(file_name)
+                .entry(blob_op.info.file.clone())
                 .or_insert(vec![])
-                .push(blob_modification.clone());
+                .push(blob_op.clone());
         }
 
         (tree_map, blob_map)
@@ -198,7 +200,7 @@ impl Change {
         let mut blob_sections = HashMap::new();
         for blob in &self.blobs {
             blob_sections
-                .entry(blob.extract_path())
+                .entry(blob.info.extract_path())
                 .or_insert(vec![])
                 .push(blob.clone());
         }
@@ -255,28 +257,21 @@ impl Change {
                     return None;
                 };
 
-                result.trees.push(match (species, container) {
-                    ("+", "D") => modification::Tree::CreateTree(
-                        urlencoding::decode(parent).unwrap().to_string(),
-                        urlencoding::decode(name).unwrap().to_string(),
-                    ),
-                    ("-", "D") => modification::Tree::DeleteTree(
-                        urlencoding::decode(parent).unwrap().to_string(),
-                        urlencoding::decode(name).unwrap().to_string(),
-                    ),
-                    ("+", "F") => modification::Tree::CreateBlob(
-                        urlencoding::decode(parent).unwrap().to_string(),
-                        urlencoding::decode(name).unwrap().to_string(),
-                    ),
-                    ("-", "F") => modification::Tree::DeleteBlob(
-                        urlencoding::decode(parent).unwrap().to_string(),
-                        urlencoding::decode(name).unwrap().to_string(),
-                    ),
-                    _ => {
-                        println!("invalid tree");
-                        return None;
-                    }
-                });
+                if let (Some(tree_type), Some(mod_op)) = (
+                    modification::tree::TreeType::from_notation(container),
+                    ModOp::from_notation(species),
+                ) {
+                    result.trees.push(modification::TreeOp {
+                        tree_type,
+                        mod_op,
+                        info: modification::tree::TreeOpInfo {
+                            parent: urlencoding::decode(parent).unwrap().to_string(),
+                            name: urlencoding::decode(name).unwrap().to_string(),
+                        },
+                    });
+                } else {
+                    return None;
+                }
             } else {
                 if content[0] == "|" {
                     // | .%2Fsrc content.rs
@@ -308,27 +303,18 @@ impl Change {
                             let decoded_name = urlencoding::decode(n).unwrap().to_string();
                             let s = unescape::unescape(&content[2..].join(" ")).unwrap();
                             let content_text = s[1..s.len() - 1].to_string();
-
-                            match species {
-                                "+" => {
-                                    result.blobs.push(modification::Blob::Create(
-                                        decoded_path,
-                                        decoded_name,
+                            if let Some(mod_op) = ModOp::from_notation(species) {
+                                result.blobs.push(modification::BlobOp {
+                                    mod_op,
+                                    info: BlobOpInfo {
+                                        parent: decoded_path,
+                                        file: decoded_name,
                                         line,
-                                        content_text,
-                                    ));
-                                }
-                                "-" => {
-                                    result.blobs.push(modification::Blob::Delete(
-                                        decoded_path,
-                                        decoded_name,
-                                        line,
-                                        content_text,
-                                    ));
-                                }
-                                _ => {
-                                    return None;
-                                }
+                                        text: content_text,
+                                    },
+                                });
+                            } else {
+                                return None;
                             }
                         }
                         None => {
@@ -347,7 +333,7 @@ impl Change {
         upstream_blob: &Blob,
         current_blob: &Blob,
         blob_name: &str,
-    ) -> Vec<modification::Blob> {
+    ) -> Vec<modification::BlobOp> {
         // https://blog.jcoglan.com/2017/02/15/the-myers-diff-algorithm-part-2/
         // for our change algorithm, we will be using myers diff algorithm
         // basically a shortest distance problem, with downwards, rightwards and diagonal directions as movement choices
@@ -370,17 +356,35 @@ impl Change {
             _ => Some(c),
         }) {
             result.push(match change.tag() {
-                ChangeTag::Delete => modification::Blob::Delete(
-                    path.clone(),
-                    blob_name.to_string(),
-                    change.old_index().unwrap(),
-                    change.to_string().strip_suffix("\n").unwrap().to_string(),
+                // ChangeTag::Delete => modification::Blob::Delete(
+                //     path.clone(),
+                //     blob_name.to_string(),
+                //     change.old_index().unwrap(),
+                //     change.to_string().strip_suffix("\n").unwrap().to_string(),
+                // ),
+                // ChangeTag::Insert => modification::Blob::Create(
+                //     path.clone(),
+                //     blob_name.to_string(),
+                //     change.new_index().unwrap(),
+                //     change.to_string().strip_suffix("\n").unwrap().to_string(),
+                // ),
+                ChangeTag::Delete => modification::BlobOp::new(
+                    ModOp::Delete,
+                    modification::BlobOpInfo::new(
+                        path.clone(),
+                        blob_name.to_string(),
+                        change.old_index().unwrap(),
+                        change.to_string().strip_suffix("\n").unwrap().to_string(),
+                    ),
                 ),
-                ChangeTag::Insert => modification::Blob::Create(
-                    path.clone(),
-                    blob_name.to_string(),
-                    change.new_index().unwrap(),
-                    change.to_string().strip_suffix("\n").unwrap().to_string(),
+                ChangeTag::Insert => modification::BlobOp::new(
+                    ModOp::Create,
+                    modification::BlobOpInfo::new(
+                        path.clone(),
+                        blob_name.to_string(),
+                        change.new_index().unwrap(),
+                        change.to_string().strip_suffix("\n").unwrap().to_string(),
+                    ),
                 ),
                 _ => panic!("Unmatched change type: {}", change),
             })
@@ -439,14 +443,16 @@ impl Change {
         let mut blob_mods = vec![];
         for (name, is_blob) in deleted {
             if is_blob {
-                tree_mods.push(modification::Tree::DeleteBlob(
-                    path.to_string_lossy().to_string(),
-                    name,
+                tree_mods.push(modification::TreeOp::new(
+                    modification::TreeType::Blob,
+                    ModOp::Delete,
+                    TreeOpInfo::new(path.to_string_lossy().to_string(), name),
                 ));
             } else {
-                tree_mods.push(modification::Tree::DeleteTree(
-                    path.to_string_lossy().to_string(),
-                    name.clone(),
+                tree_mods.push(modification::TreeOp::new(
+                    TreeType::Tree,
+                    ModOp::Delete,
+                    TreeOpInfo::new(path.to_string_lossy().to_string(), name.clone()),
                 ));
                 // traverse all children, add them to result as well
                 let mut changes = Change::get_change_all(
@@ -473,9 +479,10 @@ impl Change {
         // for all created trees, log them and do the same for all children
         for (name, is_blob) in created {
             if is_blob {
-                tree_mods.push(modification::Tree::CreateBlob(
-                    path.to_string_lossy().to_string(),
-                    name.clone(),
+                tree_mods.push(modification::TreeOp::new(
+                    TreeType::Blob,
+                    ModOp::Create,
+                    TreeOpInfo::new(path.to_string_lossy().to_string(), name.clone()),
                 ));
                 blob_mods.append(&mut Change::get_change(
                     path.to_string_lossy().to_string(),
@@ -492,9 +499,10 @@ impl Change {
                     &(name.clone()),
                 ))
             } else {
-                tree_mods.push(modification::Tree::CreateTree(
-                    path.to_string_lossy().to_string(),
-                    name.clone(),
+                tree_mods.push(modification::TreeOp::new(
+                    TreeType::Tree,
+                    ModOp::Create,
+                    TreeOpInfo::new(path.to_string_lossy().to_string(), name.clone()),
                 ));
 
                 let mut changes = Change::get_change_all(

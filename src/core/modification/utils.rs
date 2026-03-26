@@ -17,7 +17,7 @@ impl TreeEntry {
     pub fn blob_blame_header(
         &self,
         modifications: &HashMap<String, bool>,
-        blob_info: &Vec<modification::Blob>,
+        blob_info: &Vec<modification::BlobOp>,
     ) -> String {
         // returns:
         // (-) earth
@@ -46,15 +46,16 @@ impl TreeEntry {
                     "[+{}, -{}]",
                     blob_info
                         .iter()
-                        .filter(|b| match b {
-                            modification::Blob::Create(_, _, _, _) => true,
+                        .filter(|b| match b.mod_op {
+                            // modification::Blob::Create(_, _, _, _) => true,
+                            modification::change::ModOp::Create => true,
                             _ => false,
                         })
                         .count(),
                     blob_info
                         .iter()
-                        .filter(|b| match b {
-                            modification::Blob::Delete(_, _, _, _) => true,
+                        .filter(|b| match b.mod_op {
+                            modification::change::ModOp::Delete => true,
                             _ => false,
                         })
                         .count(),
@@ -67,8 +68,8 @@ impl TreeEntry {
 pub fn generate_blame_tree(
     tree: &Tree,
     sanctum_path: &PathBuf,
-    tree_map: &HashMap<String, HashSet<modification::Tree>>,
-    blob_map: &HashMap<String, HashMap<String, Vec<modification::Blob>>>,
+    tree_map: &HashMap<String, HashSet<modification::TreeOp>>,
+    blob_map: &HashMap<String, HashMap<String, Vec<modification::BlobOp>>>,
 ) -> String {
     return generate_blame_subtree(
         // &Object::Tree(tree.clone()),
@@ -88,8 +89,8 @@ pub fn generate_blame_subtree(
     entry: &TreeEntry,
     path: &PathBuf,
     sanctum_path: &PathBuf,
-    tree_map: &HashMap<String, HashSet<modification::Tree>>,
-    blob_map: &HashMap<String, HashMap<String, Vec<modification::Blob>>>,
+    tree_map: &HashMap<String, HashSet<modification::TreeOp>>,
+    blob_map: &HashMap<String, HashMap<String, Vec<modification::BlobOp>>>,
 ) -> String {
     let mut result = vec![];
 
@@ -98,11 +99,17 @@ pub fn generate_blame_subtree(
             .get(&path.to_string_lossy().to_string())
             .map_or(HashMap::new(), |h| {
                 h.into_iter()
-                    .map(|v| match v {
-                        modification::Tree::CreateTree(_, n)
-                        | modification::Tree::CreateBlob(_, n) => (n.to_string(), true),
-                        modification::Tree::DeleteTree(_, n)
-                        | modification::Tree::DeleteBlob(_, n) => (n.to_string(), false),
+                    // .map(|v| match v {
+                    //     modification::Tree::CreateTree(_, n)
+                    //     | modification::Tree::CreateBlob(_, n) => (n.to_string(), true),
+                    //     modification::Tree::DeleteTree(_, n)
+                    //     | modification::Tree::DeleteBlob(_, n) => (n.to_string(), false),
+                    // })
+                    .map(|v| {
+                        (
+                            v.info.name.to_string(),
+                            v.mod_op.eq(&modification::change::ModOp::Create),
+                        )
                     })
                     .collect::<HashMap<String, bool>>()
             });

@@ -109,7 +109,8 @@ naively reinvent the wheel."#,
                 .arg_required_else_help(true)
                 .arg(arg!([OBJECT]... "Branch/commit to checkout").required(true))
                 .arg(arg!(-b --base <BASE> "Branch to base from"))
-                .arg(arg!(-n --new <NEW> "Create new if no exist").action(clap::ArgAction::Count)),
+                .arg(arg!(-n --new <NEW> "Create new if no exist").action(clap::ArgAction::Count))
+                .arg(arg!(-l --list <LIST> "List all available branches").action(clap::ArgAction::Count)),
         ),
         (
             command_module::tree,

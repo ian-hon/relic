@@ -152,21 +152,26 @@ pub fn test(state: Option<&mut State>, _: &ArgMatches) {
 
     // return;
 
-    let a =
-        ObjectID::from_string("5517d4ed1fc4048a6097ebdf4f290f216aebf9b1a1c22fad0a01ce47c6245611")
+    let current =
+        ObjectID::from_string("aa960aa5692ca817a7aa911b0f9ecdf41e0da88d1d26abd2180b5dd910ff2d09")
             .unwrap()
             .construct_strict::<Tree>(&state.get_sanctum_path())
             .unwrap();
-    let b =
+    let upstream =
         ObjectID::from_string("7f8e41b14f39fc3c712e6b98423e41a44780fa076a38b4ffcc405242beff2202")
             .unwrap()
             .construct_strict::<Tree>(&state.get_sanctum_path())
             .unwrap();
 
-    let change = Change::get_change_all(&a, &b, &state.get_sanctum_path(), &state.root_path);
+    let change = Change::get_change_all(
+        &upstream,
+        &current,
+        &state.get_sanctum_path(),
+        &state.root_path,
+    );
     println!(
         "{}",
-        change.as_human_readable(&b, &state.get_sanctum_path())
+        change.as_human_readable(&current, &state.get_sanctum_path())
     );
 
     // println!("{}", a.get_body_as_string().unwrap());
