@@ -2,7 +2,10 @@ use clap::ArgMatches;
 
 use crate::core::{
     branch::branch::{Branch, BranchSource, HeadType},
-    data::{commit::Commit, tree::Tree},
+    data::{
+        commit::{self, Commit, CommitState},
+        tree::Tree,
+    },
     error::{BranchError, RelicError},
     oid::ObjectID,
     state::State,
@@ -32,14 +35,122 @@ checkout has two functionalities
 pub fn checkout(state: Option<&mut State>, args: &ArgMatches) {
     let Some(state) = state else { return };
 
-    let object_name = args.get_one::<String>("OBJECT").unwrap().clone();
+    let (list_all, list_upstream, list_local) = (
+        args.get_count("all") != 0,
+        args.get_count("upstream") != 0,
+        args.get_count("local") != 0,
+    );
+
+    if list_all || list_upstream || list_local {
+        let Ok(branches) = Branch::get_all_branches(state) else {
+            println!("Unable to fetch all branches. Is your relic configuration corrupted?");
+            return;
+        };
+
+        let active = Branch::get_head(state, &BranchSource::Local)
+            .ok()
+            .map_or(None, |h| match h {
+                HeadType::Branch(b) => Some(b.name),
+                _ => None,
+            });
+
+        for (b, m) in branches.iter() {
+            // println!("{b} : {} {m:?}", !m.contains_key(&BranchSource::Local));
+            let s = if !list_all {
+                if (list_upstream && !m.contains_key(&BranchSource::Upstream))
+                    || (list_local && !m.contains_key(&BranchSource::Local))
+                {
+                    continue;
+                }
+
+                if list_upstream {
+                    BranchSource::Upstream
+                } else {
+                    BranchSource::Local
+                }
+            } else {
+                if !m.contains_key(&BranchSource::Local) {
+                    BranchSource::Upstream
+                } else {
+                    BranchSource::Local
+                }
+            };
+
+            /*
+            main (5 commits ahead of remote)
+            rewrite (5 commits behind main)
+            another
+            remote/main
+            remote/rewrite
+             */
+
+            println!(
+                "{}{}",
+                if active.as_ref().is_some_and(|a| a.eq(b)) {
+                    "(HEAD) "
+                } else {
+                    "       "
+                },
+                match s {
+                    BranchSource::Local => {
+                        // format!("{b}", match commit::Commit::get_state(upstream, local, sanctum_path))
+                        let suffix = if let Some(upstream) = m.get(&BranchSource::Upstream) {
+                            let local_commit = m
+                                .get(&BranchSource::Local)
+                                .unwrap()
+                                .clone()
+                                .get_commit(&state.get_sanctum_path())
+                                .unwrap();
+                            match Commit::get_state(
+                                upstream
+                                    .clone()
+                                    .get_commit(&state.get_sanctum_path())
+                                    .unwrap(),
+                                local_commit,
+                                &state.get_sanctum_path(),
+                            ) {
+                                CommitState::Ahead(commits) => {
+                                    format!("({} commits ahead of upstream)", commits.len())
+                                }
+                                CommitState::Behind(commits) => {
+                                    format!("({} commits behind upstream)", commits.len())
+                                }
+                                CommitState::Divergence(luca, remainder) => {
+                                    format!(
+                                        "({} ahead, {} behind; diverged at commit {{{}}})",
+                                        remainder.1.len(),
+                                        remainder.0.len(),
+                                        luca.oid.as_trunc()
+                                    )
+                                }
+                                CommitState::None => "(completely detached (how lmao))".to_string(),
+                                CommitState::Tie => "".to_string(),
+                            }
+                        } else {
+                            "".to_string()
+                        };
+
+                        format!("{b} {suffix}")
+                    }
+                    BranchSource::Upstream => format!("remote/{b}"),
+                }
+            );
+        }
+
+        return;
+    }
+
+    let Some(object_name) = args.get_one::<String>("OBJECT") else {
+        println!("Commit/object not specified.");
+        return;
+    };
     // determine whether its an object
     if let Some(c) = ObjectID::from_string(&object_name)
         .and_then(|o| o.construct_strict::<Commit>(&state.get_sanctum_path()))
     {
         println!(
             "Detaching head and checking out commit:\n{}.",
-            c.get_nickname()
+            c.get_nickname(false)
         );
 
         if let Some(e) = Branch::set_head_detached(c, state) {

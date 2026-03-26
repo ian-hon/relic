@@ -1,4 +1,4 @@
-use std::{fs, path::PathBuf};
+use std::{collections::HashMap, fs, path::PathBuf};
 
 use crate::core::{
     data::commit::Commit,
@@ -83,6 +83,62 @@ impl Branch {
             .filter(|i| i.0.is_some())
             .map(|s| (s.0.unwrap(), s.1))
             .collect()
+    }
+
+    // returns all branches in both local and upstream
+    pub fn get_all_branches(
+        state: &State,
+    ) -> Result<Vec<(String, HashMap<BranchSource, Branch>)>, RelicError> {
+        let Ok(locals) = fs::read_dir(state.get_local_branches_path()) else {
+            return Err(RelicError::BranchError(BranchError::CantIterateBranches));
+        };
+
+        let Ok(upstreams) = fs::read_dir(state.get_upstream_branches_path()) else {
+            return Err(RelicError::BranchError(BranchError::CantIterateBranches));
+        };
+
+        let mut result: HashMap<String, HashMap<BranchSource, Branch>> = HashMap::new();
+
+        for file in locals {
+            if let Ok(file) = file {
+                let file_name = file.file_name();
+                let file_type = file.file_type().unwrap();
+                if file_type.is_file() {
+                    let Some(b) = Branch::construct_from_name(
+                        &file_name.to_string_lossy(),
+                        state,
+                        &BranchSource::Local,
+                    ) else {
+                        return Err(RelicError::BranchError(BranchError::BranchDoesntExist));
+                    };
+                    result.insert(b.name.clone(), HashMap::from([(BranchSource::Local, b)]));
+                }
+            }
+        }
+
+        for file in upstreams {
+            if let Ok(file) = file {
+                let file_name = file.file_name();
+                let file_type = file.file_type().unwrap();
+                if file_type.is_file() {
+                    let Some(b) = Branch::construct_from_name(
+                        &file_name.to_string_lossy(),
+                        state,
+                        &BranchSource::Upstream,
+                    ) else {
+                        return Err(RelicError::BranchError(BranchError::BranchDoesntExist));
+                    };
+                    result
+                        .entry(b.name.clone())
+                        .and_modify(|m| {
+                            m.insert(BranchSource::Upstream, b.clone());
+                        })
+                        .or_insert(HashMap::from([(BranchSource::Upstream, b)]));
+                }
+            }
+        }
+
+        Ok(result.drain().collect())
     }
 
     pub fn get_head(state: &State, source: &BranchSource) -> Result<HeadType, RelicError> {
@@ -195,6 +251,7 @@ impl Branch {
 
     // outright deletes the entire branch from local branch
     pub fn delete(name: String, state: &State, source: BranchSource) -> Option<RelicError> {
+        // TODO: figure out how to deal with upstream deletion
         // deletes branches/{name}
         // head = remains same
         let file_path = source.path(state).join(&name);
@@ -239,6 +296,7 @@ impl Branch {
     }
 }
 
+#[derive(Debug, Eq, PartialEq, Hash)]
 pub enum BranchSource {
     Local,
     Upstream,

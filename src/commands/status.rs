@@ -24,22 +24,22 @@ pub fn status(state: Option<&mut State>, _: &ArgMatches) {
                     CommitState::Ahead(v) => {
                         println!("Local is ahead by {} commits.", v.len());
                         for c in v {
-                            println!("{}", c.get_nickname());
+                            println!("{}", c.get_nickname(false));
                         }
                     }
                     CommitState::Behind(v) => {
                         println!("Local is behind by {} commits.", v.len());
                         for c in v {
-                            println!("{}", c.get_nickname());
+                            println!("{}", c.get_nickname(false));
                         }
                     }
                     CommitState::Tie => {
                         println!("Local is up to date with upstream.");
                     }
-                    CommitState::Conflict(ancestor) => {
+                    CommitState::Divergence(ancestor, _) => {
                         println!(
                             "Divergence between local and upstream. Last common ancestor:\n{}",
-                            ancestor.get_nickname()
+                            ancestor.get_nickname(false)
                         );
                     }
                     CommitState::None => {

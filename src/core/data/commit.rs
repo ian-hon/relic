@@ -135,11 +135,11 @@ description {}",
         }
     }
 
-    pub fn get_nickname(&self) -> String {
+    pub fn get_nickname(&self, padding: bool) -> String {
         format!(
-            "{} {} {}",
+            "({}) \"{}\" ({})",
             self.get_oid().as_trunc(),
-            self.get_message_trunc(true),
+            self.get_message_trunc(padding),
             into_human_readable(self.timestamp)
         )
     }
@@ -278,9 +278,9 @@ description {}",
         // only care about HEAD
         // if l.head is inside u_set => Behind
         // if u.head is inside l_set => Ahead
-        // if neither => None OR Conflict
+        // if neither => None OR Divergence
         //      find the last common commit between upstream and local
-        // //      if none exists => None
+        //           if none exists => None
 
         // i dont think we need to care about the surrogate parents
         // (emphasis on think)
@@ -312,16 +312,19 @@ description {}",
             panic!("no common found: Behind");
         }
 
-        if let Some((c, _)) = Commit::get_last_common(&u_all, &l_all) {
-            return CommitState::Conflict(c.clone());
+        if let Some((c, index)) = Commit::get_last_common(&u_all, &l_all) {
+            // technically speaking there shouldnt be oob error here
+            // if index + 1 doesnt exist, that means its either behind or ahead; not divergent
+            return CommitState::Divergence(
+                c.clone(),
+                (u_all[(index + 1)..].to_vec(), l_all[(index + 1)..].to_vec()),
+            );
         }
         CommitState::None
     }
 
     fn get_last_common(a: &Vec<Commit>, b: &Vec<Commit>) -> Option<(Commit, usize)> {
         // for a and b, oldest commit to newest commit
-
-        // TODO: test
         // can use binary search here to speed things up
         let mut previous = None;
         for index in 0..(a.len().min(b.len())) {
@@ -374,15 +377,15 @@ pub enum CommitState {
     Upstream: A > B > C
     Local   : A > B > C
      */
-    Conflict(Commit), // upstream and local have conflicting commits
-    // Conflict({last common commit})
+    Divergence(Commit, (Vec<Commit>, Vec<Commit>)), // upstream and local have diverging commits
+    // Divergence({last common commit})
     /*
     Upstream: A > B > C > D > E
     Local   : A > B > C > F > G
 
-    Two types of conflicts:
+    Two types of divergence:
         Resolved
-            There are no conflicts in the changes between upstream and local
+            There are no divergence in the changes between upstream and local
             Basically, upstream and local did not modify any of the same files
 
             What to do:
@@ -391,7 +394,7 @@ pub enum CommitState {
                 Result: A > B > C > D > E > F > G
 
         Unresolved
-            There are conflicts in the changes between upstream and local
+            There are divergence in the changes between upstream and local
             Upstream and local modified the same files
             Dont know whether to use upstream's or local's changes
 

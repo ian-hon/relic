@@ -40,6 +40,8 @@ pub enum SanctumError {
 
 #[derive(Debug)]
 pub enum BranchError {
+    CantIterateBranches,
+
     BranchExists,
     BranchDoesntExist,
 
