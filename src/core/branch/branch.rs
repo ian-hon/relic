@@ -25,7 +25,7 @@ pub struct Branch {
 }
 impl Branch {
     // instance methods
-    pub fn get_commit(self, sanctum_path: &PathBuf) -> Result<Commit, RelicError> {
+    pub fn get_commit(&self, sanctum_path: &PathBuf) -> Result<Commit, RelicError> {
         if let Ok(result) = self.head.construct(sanctum_path) {
             return match result {
                 Object::Commit(c) => Ok(c),

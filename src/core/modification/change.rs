@@ -85,7 +85,6 @@ impl Change {
         // // HashMap<String, HashMap<String, Vec<modifications::Blob>>>,
 
         let mut changes = self.clone();
-        println!("{:?}", self.trees);
         changes.trees = changes
             .trees
             .clone()
@@ -95,7 +94,6 @@ impl Change {
                 _ => true,
             })
             .collect::<Vec<modification::TreeOp>>();
-        println!("{:?}", self.trees);
 
         let (tree_map, blob_map) = self.as_map();
 
@@ -391,6 +389,8 @@ impl Change {
         sanctum_path: &PathBuf,
         path: &Path,
     ) -> Change {
+        // path is almost always state.root_path()
+
         // assume that both current and previous have the same tree names
         // has to be bfs
 

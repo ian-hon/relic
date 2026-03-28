@@ -64,8 +64,6 @@ impl Commit {
 
         c.oid = oid_digest_data(&c.serialise()).into();
 
-        println!("NEW COMMIT : {}", c.oid.to_string());
-
         c.write(sanctum_path);
 
         c

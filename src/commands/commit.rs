@@ -6,6 +6,7 @@ use crate::core::{
     branch::branch::{Branch, BranchSource, HeadType, DEFAULT_BRANCH},
     data::{commit::Commit, tree::Tree},
     error::{IOError, RelicError, RELIC_ERROR_CORRUPTED},
+    modification::change::Change,
     object::ObjectLike,
     state::State,
     util::get_time,
@@ -53,6 +54,18 @@ pub fn commit(state: Option<&mut State>, args: &ArgMatches) {
                         println!("No changes to commit.");
                         return;
                     }
+
+                    let c = Change::get_change_all(
+                        &previous_commit
+                            .tree
+                            .construct_strict::<Tree>(&state.get_sanctum_path())
+                            .unwrap(),
+                        &tree,
+                        &state.get_sanctum_path(),
+                        &state.root_path,
+                    );
+
+                    println!("{}", c.as_human_readable(&tree, &state.get_sanctum_path()));
 
                     let c = Commit::new(
                         tree.get_oid(),
