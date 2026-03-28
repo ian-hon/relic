@@ -78,8 +78,7 @@ pub fn commit(state: Option<&mut State>, args: &ArgMatches) {
                         &state.get_sanctum_path(),
                     );
 
-                    if let Err(e) =
-                        Branch::update_branch(b.name.clone(), c, state, &BranchSource::Local)
+                    if let Err(e) = Branch::update_branch(&b.name, &c, state, &BranchSource::Local)
                     {
                         println!(
                             "Something went wrong writing to branch \"{}\": {:?}",
@@ -98,8 +97,7 @@ pub fn commit(state: Option<&mut State>, args: &ArgMatches) {
                         &state.get_sanctum_path(),
                     );
 
-                    if let Err(e) =
-                        Branch::update_branch(b.name.clone(), c, state, &BranchSource::Local)
+                    if let Err(e) = Branch::update_branch(&b.name, &c, state, &BranchSource::Local)
                     {
                         println!(
                             "Something went wrong writing to branch \"{}\": {:?}",

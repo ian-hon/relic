@@ -7,6 +7,7 @@ pub enum RelicError {
     Unimplemented,
     ObjectID(ObjectID),
     BranchError(BranchError),
+    MergeError(MergeError),
     IOError(IOError),
     RelicInfo(Box<RelicError>),
     SanctumError(SanctumError),
@@ -49,4 +50,9 @@ pub enum BranchError {
 
     DetachedCommitExists,
     DetachedCommitDoesntExist,
+}
+
+#[derive(Debug)]
+pub enum MergeError {
+    CantMerge,
 }

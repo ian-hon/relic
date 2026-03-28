@@ -2,10 +2,7 @@ use clap::ArgMatches;
 
 use crate::core::{
     branch::branch::{Branch, BranchSource, HeadType},
-    data::{
-        commit::{Commit, CommitState},
-        tree::Tree,
-    },
+    data::{commit::Commit, commit_func::CommitState, tree::Tree},
     error::{BranchError, RelicError, RELIC_ERROR_CORRUPTED},
     oid::ObjectID,
     state::State,
@@ -102,11 +99,11 @@ pub fn checkout(state: Option<&mut State>, args: &ArgMatches) {
                                 .get_commit(&state.get_sanctum_path())
                                 .unwrap();
                             match Commit::get_state(
-                                upstream
+                                &upstream
                                     .clone()
                                     .get_commit(&state.get_sanctum_path())
                                     .unwrap(),
-                                local_commit,
+                                &local_commit,
                                 &state.get_sanctum_path(),
                             ) {
                                 CommitState::Ahead(commits) => {

@@ -8,11 +8,7 @@ use similar::{ChangeTag, TextDiff};
 
 use crate::core::{
     branch::branch::{Branch, BranchSource, HeadType},
-    data::{
-        blob::Blob,
-        commit::{Commit, CommitState},
-        tree::Tree,
-    },
+    data::{blob::Blob, commit::Commit, tree::Tree},
     modification::change::Change,
     object::{Object, ObjectLike},
     oid::ObjectID,

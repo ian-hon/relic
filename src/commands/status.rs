@@ -1,7 +1,7 @@
 use clap::ArgMatches;
 
 use crate::core::{
-    data::commit::{Commit, CommitState},
+    data::{commit::Commit, commit_func::CommitState},
     error::RELIC_ERROR_CORRUPTED,
     state::State,
 };
@@ -21,7 +21,7 @@ pub fn status(state: Option<&mut State>, _: &ArgMatches) {
                 return;
             }
             (Some(head), Some(upstream)) => {
-                match Commit::get_state(upstream, head, &state.get_sanctum_path()) {
+                match Commit::get_state(&upstream, &head, &state.get_sanctum_path()) {
                     CommitState::Ahead(v) => {
                         println!("Local is ahead by {} commits.", v.len());
                         for c in v {

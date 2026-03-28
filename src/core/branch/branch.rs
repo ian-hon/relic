@@ -1,7 +1,7 @@
 use std::{collections::HashMap, fs, path::PathBuf};
 
 use crate::core::{
-    data::commit::Commit,
+    data::{commit::Commit, tree::Tree},
     error::{self, BranchError, IOError, RelicError},
     object::Object,
     oid::ObjectID,
@@ -26,13 +26,9 @@ pub struct Branch {
 impl Branch {
     // instance methods
     pub fn get_commit(&self, sanctum_path: &PathBuf) -> Result<Commit, RelicError> {
-        if let Ok(result) = self.head.construct(sanctum_path) {
-            return match result {
-                Object::Commit(c) => Ok(c),
-                _ => Err(RelicError::ConfigurationIncorrect),
-            };
+        if let Some(c) = self.head.construct_strict::<Commit>(sanctum_path) {
+            return Ok(c);
         }
-
         Err(RelicError::ConfigurationIncorrect)
     }
 
@@ -268,8 +264,8 @@ impl Branch {
 
     // updates the branch's commit to this new commit
     pub fn update_branch(
-        name: String,
-        new_commit: Commit,
+        name: &String,
+        new_commit: &Commit,
         state: &State,
         source: &BranchSource,
     ) -> Result<Branch, RelicError> {
