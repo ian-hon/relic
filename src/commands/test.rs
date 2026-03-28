@@ -148,27 +148,27 @@ pub fn test(state: Option<&mut State>, _: &ArgMatches) {
 
     // return;
 
-    let current =
-        ObjectID::from_string("aa960aa5692ca817a7aa911b0f9ecdf41e0da88d1d26abd2180b5dd910ff2d09")
-            .unwrap()
-            .construct_strict::<Tree>(&state.get_sanctum_path())
-            .unwrap();
-    let upstream =
-        ObjectID::from_string("7f8e41b14f39fc3c712e6b98423e41a44780fa076a38b4ffcc405242beff2202")
-            .unwrap()
-            .construct_strict::<Tree>(&state.get_sanctum_path())
-            .unwrap();
+    // let current =
+    //     ObjectID::from_string("aa960aa5692ca817a7aa911b0f9ecdf41e0da88d1d26abd2180b5dd910ff2d09")
+    //         .unwrap()
+    //         .construct_strict::<Tree>(&state.get_sanctum_path())
+    //         .unwrap();
+    // let upstream =
+    //     ObjectID::from_string("7f8e41b14f39fc3c712e6b98423e41a44780fa076a38b4ffcc405242beff2202")
+    //         .unwrap()
+    //         .construct_strict::<Tree>(&state.get_sanctum_path())
+    //         .unwrap();
 
-    let change = Change::get_change_all(
-        &upstream,
-        &current,
-        &state.get_sanctum_path(),
-        &state.root_path,
-    );
-    println!(
-        "{}",
-        change.as_human_readable(&current, &state.get_sanctum_path())
-    );
+    // let change = Change::get_change_all(
+    //     &upstream,
+    //     &current,
+    //     &state.get_sanctum_path(),
+    //     &state.root_path,
+    // );
+    // println!(
+    //     "{}",
+    //     change.as_human_readable(&current, &state.get_sanctum_path())
+    // );
 
     // for (b, s) in Branch::get_all_branches(state).unwrap() {
     //     println!(
@@ -191,7 +191,41 @@ pub fn test(state: Option<&mut State>, _: &ArgMatches) {
 
     // println!("");
 
-    // for p in Branch::construct_from_name("main", state, &BranchSource::Upstream)
+    for (b, s) in Branch::get_all_branches(state).unwrap() {
+        // println!(
+        //     "{b}: {}",
+        //     s.iter()
+        //         .map(|i| format!("{:?}", i.0))
+        //         .collect::<Vec<String>>()
+        //         .join(", ")
+        // );
+
+        if b.eq("lorem") {
+            continue;
+        }
+
+        println!("{}", b);
+        for p in Branch::construct_from_name(&b, state, &BranchSource::Local)
+            .unwrap()
+            .get_commit(&state.get_sanctum_path())
+            .unwrap()
+            .get_all_parents(&state.get_sanctum_path())
+        {
+            println!("{}", p.get_nickname(true));
+        }
+        println!()
+    }
+
+    /*
+    earth: 48aa92ff9395abe218782324ad2c195152565ba7d57c0cc3358afa9f1b1d3378
+    main: 66ec1b6763661b753620737b1f9e7a37d7a22c0a3f86462a7a36669ef588f455
+
+
+     */
+
+    // println!();
+
+    // for p in Branch::construct_from_name("new_branch", state, &BranchSource::Upstream)
     //     .unwrap()
     //     .get_commit(&state.get_sanctum_path())
     //     .unwrap()

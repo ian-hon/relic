@@ -36,7 +36,7 @@ impl Commit {
 
         let (can_merge, commit_state) = Commit::can_merge(base, feature, &state.get_sanctum_path());
         if !can_merge {
-            return Err(RelicError::MergeError(MergeError::CantMerge));
+            return Err(RelicError::MergeError(MergeError::UnresolvedConflicts));
         }
         // commit_state will be a some value at this point
         let commit_state = commit_state.unwrap();

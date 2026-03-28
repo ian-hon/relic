@@ -54,5 +54,5 @@ pub enum BranchError {
 
 #[derive(Debug)]
 pub enum MergeError {
-    CantMerge,
+    UnresolvedConflicts,
 }

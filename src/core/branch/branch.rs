@@ -77,6 +77,7 @@ impl Branch {
             .into_iter()
             .map(|s| (Branch::construct_from_name(name, state, &s), s))
             .filter(|i| i.0.is_some())
+            // .map(|s| (s.1, s.0.unwrap()))
             .map(|s| (s.0.unwrap(), s.1))
             .collect()
     }

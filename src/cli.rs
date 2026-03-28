@@ -115,12 +115,21 @@ naively reinvent the wheel."#,
                 .arg(arg!(-u --upstream <UPSTREAM> "List all upstream branches").action(clap::ArgAction::Count)),
         ),
         (
+            command_module::merge,
+            Command::new("merge")
+                .about("Merges the selected branch into the current branch.")
+                .arg_required_else_help(true)
+                .arg(arg!([BRANCH] "Topic/feature branch").required(true))
+        ),
+        (
             command_module::tree,
             Command::new("tree").about("Generate content tree of current directory."),
         ),
         (
             command_module::status,
-            Command::new("status").about("View status of staging, pending and remote."),
+            Command::new("status").about("View status between branches.")
+                .arg(arg!([BASE] "Base branch"))
+                .arg(arg!([FEATURE] "Feature branch"))
         ),
         (command_module::qhar, Command::new("qhar").about("??")),
         (
