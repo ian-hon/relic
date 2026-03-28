@@ -25,8 +25,9 @@ impl Branch {
                 // Branch::update_branch(name, new_commit, state, source)
 
                 let (updated_branch, updated_branch_source) = match commit_state {
-                    CommitState::Ahead(_) => feature,
-                    CommitState::Behind(_) => base,
+                    // Ahead = feature has changes base doesnt
+                    // new merge commit is on base branch
+                    CommitState::Ahead(_) => base,
                     _ => panic!(),
                 };
 

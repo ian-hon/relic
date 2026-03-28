@@ -55,4 +55,6 @@ pub enum BranchError {
 #[derive(Debug)]
 pub enum MergeError {
     UnresolvedConflicts,
+    AlreadyContainsChanges,
+    AlreadyEqual,
 }

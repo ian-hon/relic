@@ -1,7 +1,7 @@
 use std::{collections::HashMap, fs, path::PathBuf};
 
 use crate::core::{
-    data::{commit::Commit, tree::Tree},
+    data::commit::Commit,
     error::{self, BranchError, IOError, RelicError},
     object::Object,
     oid::ObjectID,

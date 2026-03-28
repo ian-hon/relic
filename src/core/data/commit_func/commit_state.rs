@@ -1,9 +1,11 @@
 use std::{collections::HashSet, path::Path};
 
-use crate::core::{data::commit::Commit, object::ObjectLike};
+use crate::core::data::commit::Commit;
 
 impl Commit {
     pub fn get_state(upstream: &Commit, local: &Commit, sanctum_path: &Path) -> CommitState {
+        // here we check the tree's oid, not commit oid
+
         // only care about HEAD
         // if l.head is inside u_set => Behind
         // if u.head is inside l_set => Ahead
@@ -14,7 +16,7 @@ impl Commit {
         // i dont think we need to care about the surrogate parents
         // (emphasis on think)
 
-        if upstream.get_oid() == local.get_oid() {
+        if upstream.tree == local.tree {
             return CommitState::Tie;
         }
 
@@ -24,17 +26,17 @@ impl Commit {
         u_all.reverse();
         l_all.reverse();
 
-        let u_set: HashSet<[u8; 32]> = HashSet::from_iter(u_all.iter().map(|x| x.get_oid().0));
-        let l_set: HashSet<[u8; 32]> = HashSet::from_iter(l_all.iter().map(|x| x.get_oid().0));
+        let u_set: HashSet<[u8; 32]> = HashSet::from_iter(u_all.iter().map(|x| x.tree.0));
+        let l_set: HashSet<[u8; 32]> = HashSet::from_iter(l_all.iter().map(|x| x.tree.0));
 
-        if l_set.contains(&upstream.get_oid().0) {
+        if l_set.contains(&upstream.tree.0) {
             if let Some((_, i)) = Commit::get_last_common(&u_all, &l_all) {
                 return CommitState::Ahead(l_all[(i + 1)..].to_vec());
             }
             panic!("no common found: Ahead");
         }
 
-        if u_set.contains(&local.get_oid().0) {
+        if u_set.contains(&local.tree.0) {
             if let Some((_, i)) = Commit::get_last_common(&u_all, &l_all) {
                 return CommitState::Behind(u_all[(i + 1)..].to_vec());
             }
@@ -57,7 +59,7 @@ impl Commit {
         // can use binary search here to speed things up
         let mut previous = None;
         for index in 0..(a.len().min(b.len())) {
-            if a[index].get_oid() != b[index].get_oid() {
+            if a[index].tree != b[index].tree {
                 return previous;
             }
             previous = Some((a[index].clone(), index));

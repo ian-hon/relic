@@ -52,6 +52,14 @@ pub fn merge(state: Option<&mut State>, args: &ArgMatches) {
                 match e {
                     RelicError::MergeError(MergeError::UnresolvedConflicts) =>
                         "Unable to merge with unresolved conflicts.".to_string(),
+                    RelicError::MergeError(MergeError::AlreadyContainsChanges) => format!(
+                        "{} already has all of {}'s changes",
+                        base.name, feature.0.name
+                    ),
+                    RelicError::MergeError(MergeError::AlreadyEqual) => format!(
+                        "{} is already up to date with {}",
+                        base.name, feature.0.name
+                    ),
                     _ => format!("Unable to merge: {e:?}"),
                 }
             );
