@@ -25,28 +25,19 @@ impl TreeType {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
-pub struct TreeOpInfo {
-    pub parent: String,
-    pub name: String,
-}
-impl TreeOpInfo {
-    pub fn new(parent: String, name: String) -> TreeOpInfo {
-        TreeOpInfo { parent, name }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TreeOp {
     pub tree_type: TreeType,
     pub mod_op: ModOp,
-    pub info: TreeOpInfo,
+    pub parent: String,
+    pub name: String,
 }
 impl TreeOp {
-    pub fn new(tree_type: TreeType, mod_op: ModOp, info: TreeOpInfo) -> TreeOp {
+    pub fn new(tree_type: TreeType, mod_op: ModOp, parent: String, name: String) -> TreeOp {
         TreeOp {
             tree_type,
             mod_op,
-            info,
+            parent,
+            name,
         }
     }
 
@@ -60,8 +51,8 @@ impl TreeOp {
             ),
             format!(
                 "{} {}",
-                urlencoding::encode(&self.info.parent).to_string(),
-                urlencoding::encode(&self.info.name).to_string(),
+                urlencoding::encode(&self.parent).to_string(),
+                urlencoding::encode(&self.name).to_string(),
             )
         )
     }

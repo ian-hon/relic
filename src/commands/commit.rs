@@ -5,7 +5,7 @@ use clap::ArgMatches;
 use crate::core::{
     branch::branch::{Branch, BranchSource, HeadType, DEFAULT_BRANCH},
     data::{commit::Commit, tree::Tree},
-    error::{IOError, RelicError},
+    error::{IOError, RelicError, RELIC_ERROR_CORRUPTED},
     object::ObjectLike,
     state::State,
     util::get_time,
@@ -30,12 +30,13 @@ pub fn commit(state: Option<&mut State>, args: &ArgMatches) {
             println!(
                 "{}",
                 match e {
-                    RelicError::ConfigurationIncorrect => "corrupted file",
+                    RelicError::ConfigurationIncorrect =>
+                        format!("Can't build tree. {RELIC_ERROR_CORRUPTED}"),
                     RelicError::IOError(i) => match i {
-                        IOError::FileNoExist | IOError::FileCantOpen => "head not found",
-                        _ => "incorrect configuration",
+                        IOError::FileNoExist | IOError::FileCantOpen => format!("HEAD not found."),
+                        _ => format!("Incorrect configuration. {RELIC_ERROR_CORRUPTED}"),
                     },
-                    _ => "incorrect configuration",
+                    _ => format!("Incorrect configuration. {RELIC_ERROR_CORRUPTED}"),
                 }
             );
             return;
@@ -48,10 +49,10 @@ pub fn commit(state: Option<&mut State>, args: &ArgMatches) {
             HeadType::Branch(b) => {
                 // use head as parent
                 if let Ok(previous_commit) = b.clone().get_commit(&state.get_sanctum_path()) {
-                    // if previous_commit.tree == tree.get_oid() {
-                    //     println!("no changes to commit");
-                    //     return;
-                    // }
+                    if previous_commit.tree == tree.get_oid() {
+                        println!("No changes to commit.");
+                        return;
+                    }
 
                     let c = Commit::new(
                         tree.get_oid(),
@@ -64,18 +65,14 @@ pub fn commit(state: Option<&mut State>, args: &ArgMatches) {
                         &state.get_sanctum_path(),
                     );
 
-                    println!(
-                        "PREVIOUS:\n{}\n{}",
-                        previous_commit.get_oid().to_string(),
-                        str::from_utf8(&c.serialise()).unwrap()
-                    );
-
-                    println!("writing: {}", c.get_oid().to_string());
-
-                    println!(
-                        "{:?}",
-                        Branch::update_branch(b.name, c, state, &BranchSource::Local)
-                    );
+                    if let Err(e) =
+                        Branch::update_branch(b.name.clone(), c, state, &BranchSource::Local)
+                    {
+                        println!(
+                            "Something went wrong writing to branch \"{}\": {:?}",
+                            b.name, e
+                        );
+                    }
                 } else {
                     let c = Commit::new(
                         tree.get_oid(),
@@ -88,15 +85,14 @@ pub fn commit(state: Option<&mut State>, args: &ArgMatches) {
                         &state.get_sanctum_path(),
                     );
 
-                    println!(
-                        "branch exists, but no previous commit; writing new: {}",
-                        c.get_oid().to_string()
-                    );
-
-                    println!(
-                        "{:?}",
-                        Branch::update_branch(b.name, c, state, &BranchSource::Local)
-                    );
+                    if let Err(e) =
+                        Branch::update_branch(b.name.clone(), c, state, &BranchSource::Local)
+                    {
+                        println!(
+                            "Something went wrong writing to branch \"{}\": {:?}",
+                            b.name, e
+                        );
+                    }
                 }
             }
             HeadType::Detached(_) => {
@@ -119,87 +115,22 @@ pub fn commit(state: Option<&mut State>, args: &ArgMatches) {
                     c.get_oid().to_string()
                 );
 
-                // println!("{:?}", Branch::update_branch("main".to_string(), c, state));
-                println!(
-                    "{:?}",
-                    Branch::instantiate(
-                        DEFAULT_BRANCH.to_string(),
-                        Some(c),
-                        state,
-                        &BranchSource::Local
-                    )
-                );
-                println!("setting current head to new branch");
-                Branch::set_head_branch(DEFAULT_BRANCH.to_string(), state);
+                let branch_name = DEFAULT_BRANCH;
+                if let Err(e) = Branch::instantiate(
+                    branch_name.to_string(),
+                    Some(c),
+                    state,
+                    &BranchSource::Local,
+                ) {
+                    println!(
+                        "Something went wrong creating branch \"{branch_name}\": {:?}",
+                        e
+                    );
+                    return;
+                }
+                println!("HEAD now set to {branch_name}");
+                Branch::set_head_branch(branch_name.to_string(), state);
             }
         }
     }
-
-    // update local head only
-    // match state.fetch_head_commit() {
-    //     Ok(head) => {
-    //         if let Some(head) = head {
-    //             // use head as parent
-
-    //             // if head.tree == tree.get_oid() {
-    //             //     println!("no changes to commit");
-    //             //     return;
-    //             // }
-
-    //             let c = Commit::new(
-    //                 tree.get_oid(),
-    //                 Some(head.get_oid()),
-    //                 vec![],
-    //                 get_time(),
-    //                 "none".to_string(),
-    //                 message,
-    //                 description,
-    //                 &state.get_sanctum_path(),
-    //             );
-
-    //             println!(
-    //                 "IN COMMIT\n{}\n{}",
-    //                 head.get_oid().to_string(),
-    //                 str::from_utf8(&c.serialise()).unwrap()
-    //             );
-
-    //             println!("writing: {}", c.get_oid().to_string());
-
-    //             if let Ok(HeadType::Branch(b)) = Branch::get_head(state) {
-    //                 println!("{:?}", Branch::update_branch(b.name, c, state));
-    //             }
-
-    //             // let _ = fs::write(state.get_head_path(), c.get_oid().to_string());
-    //         } else {
-    //             // write into the file
-    //             let c = Commit::new(
-    //                 tree.get_oid(),
-    //                 None,
-    //                 vec![],
-    //                 get_time(),
-    //                 "none".to_string(),
-    //                 message,
-    //                 description,
-    //                 &state.get_sanctum_path(),
-    //             );
-
-    //             println!("writing as new: {}", c.get_oid().to_string());
-
-    //             if let Ok(HeadType::Branch(b)) = Branch::get_head(state) {
-    //                 println!("{:?}", Branch::update_branch(b.name, c, state));
-    //             }
-
-    //             // let _ = fs::write(state.get_head_path(), c.get_oid().to_string());
-    //         }
-    //         println!("success");
-    //     }
-    //     Err(e) => match e {
-    //         RelicError::ConfigurationIncorrect => println!("corrupted file"),
-    //         RelicError::IOError(i) => match i {
-    //             IOError::FileNoExist | IOError::FileCantOpen => println!("head not found"),
-    //             _ => println!("incorrect configuration"),
-    //         },
-    //         _ => println!("incorrect configuration"),
-    //     },
-    // }
 }

@@ -1,16 +1,12 @@
 use std::{fs, path::PathBuf};
 
 use crate::core::{
-    branch::{
-        self,
-        branch::{Branch, BranchSource, HeadType},
-    },
+    branch::branch::{Branch, BranchSource},
     data::commit::Commit,
     error::{IOError, RelicError},
     object::Object,
     oid::ObjectID,
     tracking::content_set::ContentSet,
-    util::string_to_oid,
 };
 
 /* File structure:
@@ -67,36 +63,36 @@ impl State {
         })
     }
 
-    // input: path to a file containing a singular oid
-    // output: Commit object from the oid
-    fn fetch_from_commit_file(&self, path: PathBuf) -> Result<Option<Commit>, RelicError> {
-        if !path.exists() {
-            return Err(RelicError::IOError(IOError::FileNoExist));
-        }
+    // // input: path to a file containing a singular oid
+    // // output: Commit object from the oid
+    // fn fetch_from_commit_file(&self, path: PathBuf) -> Result<Option<Commit>, RelicError> {
+    //     if !path.exists() {
+    //         return Err(RelicError::IOError(IOError::FileNoExist));
+    //     }
 
-        if let Ok(oid_raw) = fs::read(path) {
-            if oid_raw.is_empty() {
-                return Ok(None);
-            }
+    //     if let Ok(oid_raw) = fs::read(path) {
+    //         if oid_raw.is_empty() {
+    //             return Ok(None);
+    //         }
 
-            // let oid_raw: ObjectID = string_to_oid(str::from_utf8(&oid_raw).unwrap()).into();
-            let oid_raw = match ObjectID::from_string(str::from_utf8(&oid_raw).unwrap()) {
-                Some(o) => o,
-                None => return Err(RelicError::ObjectID(super::error::ObjectID::InvalidID)),
-            };
+    //         // let oid_raw: ObjectID = string_to_oid(str::from_utf8(&oid_raw).unwrap()).into();
+    //         let oid_raw = match ObjectID::from_string(str::from_utf8(&oid_raw).unwrap()) {
+    //             Some(o) => o,
+    //             None => return Err(RelicError::ObjectID(super::error::ObjectID::InvalidID)),
+    //         };
 
-            match oid_raw.construct(&self.get_sanctum_path()) {
-                Ok(c) => {
-                    return match c {
-                        Object::Commit(c) => Ok(Some(c)),
-                        _ => Err(RelicError::ConfigurationIncorrect),
-                    };
-                }
-                Err(_) => return Err(RelicError::ConfigurationIncorrect),
-            }
-        }
-        Err(RelicError::IOError(IOError::FileCantOpen))
-    }
+    //         match oid_raw.construct(&self.get_sanctum_path()) {
+    //             Ok(c) => {
+    //                 return match c {
+    //                     Object::Commit(c) => Ok(Some(c)),
+    //                     _ => Err(RelicError::ConfigurationIncorrect),
+    //                 };
+    //             }
+    //             Err(_) => return Err(RelicError::ConfigurationIncorrect),
+    //         }
+    //     }
+    //     Err(RelicError::IOError(IOError::FileCantOpen))
+    // }
 
     pub fn fetch_local_head_commit(&self) -> Result<Option<Commit>, RelicError> {
         Branch::get_head(self, &BranchSource::Local)

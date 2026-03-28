@@ -3,10 +3,10 @@ use clap::ArgMatches;
 use crate::core::{
     branch::branch::{Branch, BranchSource, HeadType},
     data::{
-        commit::{self, Commit, CommitState},
+        commit::{Commit, CommitState},
         tree::Tree,
     },
-    error::{BranchError, RelicError},
+    error::{BranchError, RelicError, RELIC_ERROR_CORRUPTED},
     oid::ObjectID,
     state::State,
     write,
@@ -43,7 +43,7 @@ pub fn checkout(state: Option<&mut State>, args: &ArgMatches) {
 
     if list_all || list_upstream || list_local {
         let Ok(branches) = Branch::get_all_branches(state) else {
-            println!("Unable to fetch all branches. Is your relic configuration corrupted?");
+            println!("Unable to fetch all branches. {RELIC_ERROR_CORRUPTED}");
             return;
         };
 

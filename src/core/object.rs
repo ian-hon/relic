@@ -53,7 +53,6 @@ impl Object {
     pub fn extract_header(payload: &Vec<u8>) -> Option<ObjectType> {
         if payload.len() < 2 {
             panic!("none");
-            return None;
         }
 
         ObjectType::from_u8(payload[0])

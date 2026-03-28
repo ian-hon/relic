@@ -2,6 +2,7 @@ use clap::ArgMatches;
 
 use crate::core::{
     data::commit::{Commit, CommitState},
+    error::RELIC_ERROR_CORRUPTED,
     state::State,
 };
 
@@ -43,15 +44,13 @@ pub fn status(state: Option<&mut State>, _: &ArgMatches) {
                         );
                     }
                     CommitState::None => {
-                        println!("Upstream and local are not related. Is your relic configuration corrupted?");
+                        println!("Upstream and local are not related. {RELIC_ERROR_CORRUPTED}");
                     }
                 }
             }
         },
         _ => {
-            println!(
-                "Cant seem to get either upstream or head. Is your relic configuration corrupted?"
-            )
+            println!("Cant seem to get either upstream or head. {RELIC_ERROR_CORRUPTED}")
         }
     }
 }

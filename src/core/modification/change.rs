@@ -11,7 +11,7 @@ use crate::core::{
         blob::Blob,
         tree::{self, Tree, TreeEntry},
     },
-    modification::{self, blob::BlobOpInfo, utils, TreeOpInfo, TreeType},
+    modification::{self, utils, TreeType},
     object::Object,
 };
 
@@ -161,7 +161,7 @@ impl Change {
         let mut tree_map = HashMap::new();
         for tree_op in &self.trees {
             tree_map
-                .entry(tree_op.info.parent.clone())
+                .entry(tree_op.parent.clone())
                 .or_insert(HashSet::new())
                 .insert(tree_op.clone());
         }
@@ -169,9 +169,9 @@ impl Change {
         let mut blob_map = HashMap::new();
         for blob_op in &self.blobs {
             blob_map
-                .entry(blob_op.info.parent.clone())
+                .entry(blob_op.parent.clone())
                 .or_insert(HashMap::new())
-                .entry(blob_op.info.file.clone())
+                .entry(blob_op.file.clone())
                 .or_insert(vec![])
                 .push(blob_op.clone());
         }
@@ -200,7 +200,7 @@ impl Change {
         let mut blob_sections = HashMap::new();
         for blob in &self.blobs {
             blob_sections
-                .entry(blob.info.extract_path())
+                .entry(blob.extract_path())
                 .or_insert(vec![])
                 .push(blob.clone());
         }
@@ -264,10 +264,8 @@ impl Change {
                     result.trees.push(modification::TreeOp {
                         tree_type,
                         mod_op,
-                        info: modification::tree::TreeOpInfo {
-                            parent: urlencoding::decode(parent).unwrap().to_string(),
-                            name: urlencoding::decode(name).unwrap().to_string(),
-                        },
+                        parent: urlencoding::decode(parent).unwrap().to_string(),
+                        name: urlencoding::decode(name).unwrap().to_string(),
                     });
                 } else {
                     return None;
@@ -306,12 +304,10 @@ impl Change {
                             if let Some(mod_op) = ModOp::from_notation(species) {
                                 result.blobs.push(modification::BlobOp {
                                     mod_op,
-                                    info: BlobOpInfo {
-                                        parent: decoded_path,
-                                        file: decoded_name,
-                                        line,
-                                        text: content_text,
-                                    },
+                                    parent: decoded_path,
+                                    file: decoded_name,
+                                    line,
+                                    text: content_text,
                                 });
                             } else {
                                 return None;
@@ -370,21 +366,17 @@ impl Change {
                 // ),
                 ChangeTag::Delete => modification::BlobOp::new(
                     ModOp::Delete,
-                    modification::BlobOpInfo::new(
-                        path.clone(),
-                        blob_name.to_string(),
-                        change.old_index().unwrap(),
-                        change.to_string().strip_suffix("\n").unwrap().to_string(),
-                    ),
+                    path.clone(),
+                    blob_name.to_string(),
+                    change.old_index().unwrap(),
+                    change.to_string().strip_suffix("\n").unwrap().to_string(),
                 ),
                 ChangeTag::Insert => modification::BlobOp::new(
                     ModOp::Create,
-                    modification::BlobOpInfo::new(
-                        path.clone(),
-                        blob_name.to_string(),
-                        change.new_index().unwrap(),
-                        change.to_string().strip_suffix("\n").unwrap().to_string(),
-                    ),
+                    path.clone(),
+                    blob_name.to_string(),
+                    change.new_index().unwrap(),
+                    change.to_string().strip_suffix("\n").unwrap().to_string(),
                 ),
                 _ => panic!("Unmatched change type: {}", change),
             })
@@ -446,13 +438,15 @@ impl Change {
                 tree_mods.push(modification::TreeOp::new(
                     modification::TreeType::Blob,
                     ModOp::Delete,
-                    TreeOpInfo::new(path.to_string_lossy().to_string(), name),
+                    path.to_string_lossy().to_string(),
+                    name,
                 ));
             } else {
                 tree_mods.push(modification::TreeOp::new(
                     TreeType::Tree,
                     ModOp::Delete,
-                    TreeOpInfo::new(path.to_string_lossy().to_string(), name.clone()),
+                    path.to_string_lossy().to_string(),
+                    name.clone(),
                 ));
                 // traverse all children, add them to result as well
                 let mut changes = Change::get_change_all(
@@ -482,7 +476,8 @@ impl Change {
                 tree_mods.push(modification::TreeOp::new(
                     TreeType::Blob,
                     ModOp::Create,
-                    TreeOpInfo::new(path.to_string_lossy().to_string(), name.clone()),
+                    path.to_string_lossy().to_string(),
+                    name.clone(),
                 ));
                 blob_mods.append(&mut Change::get_change(
                     path.to_string_lossy().to_string(),
@@ -502,7 +497,8 @@ impl Change {
                 tree_mods.push(modification::TreeOp::new(
                     TreeType::Tree,
                     ModOp::Create,
-                    TreeOpInfo::new(path.to_string_lossy().to_string(), name.clone()),
+                    path.to_string_lossy().to_string(),
+                    name.clone(),
                 ));
 
                 let mut changes = Change::get_change_all(

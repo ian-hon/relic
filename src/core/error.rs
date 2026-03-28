@@ -1,3 +1,5 @@
+pub const RELIC_ERROR_CORRUPTED: &str = "Is your relic configuration corrupted?";
+
 #[derive(Debug)]
 pub enum RelicError {
     IgnoredFile,
