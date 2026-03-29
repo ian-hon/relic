@@ -35,6 +35,11 @@ pub struct State {
     pub ignore_set: ContentSet,
 }
 impl State {
+    pub fn initialise() -> Option<State> {
+        // creates all relevant files & folders at specified root path
+        None
+    }
+
     pub fn construct(root_path: PathBuf) -> Option<State> {
         // load tracking and ignore set
         let relic_path = root_path.join(RELIC_PATH);

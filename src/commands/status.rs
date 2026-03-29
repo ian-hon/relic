@@ -1,19 +1,22 @@
-use clap::ArgMatches;
-
 use crate::core::{
     branch::branch::Branch,
     data::{commit::Commit, commit_func::CommitState},
     error::RELIC_ERROR_CORRUPTED,
     state::State,
 };
+use clap::Args;
 
-pub fn status(state: Option<&mut State>, args: &ArgMatches) {
-    let Some(state) = state else { return };
+#[derive(Args)]
+pub struct StatusArgs {
+    /// Base branch
+    pub base: Option<String>,
 
-    let pair = match (
-        args.get_one::<String>("BASE"),
-        args.get_one::<String>("FEATURE"),
-    ) {
+    /// Feature branch
+    pub feature: Option<String>,
+}
+
+pub fn status(state: &mut State, args: StatusArgs) {
+    let pair = match (args.base.as_deref(), args.feature.as_deref()) {
         (Some(base_name), Some(feature_name)) => {
             let base_branches = Branch::construct_from_name_all(state, base_name);
             let Some(base_branch) = base_branches.first() else {
@@ -35,10 +38,7 @@ pub fn status(state: Option<&mut State>, args: &ArgMatches) {
                 return;
             };
 
-            (
-                (base_commit, base_name.as_str()),
-                (feature_commit, feature_name.as_str()),
-            )
+            ((base_commit, base_name), (feature_commit, feature_name))
         }
         (Some(base_name), None) => {
             let base_commits = Branch::construct_from_name_all(state, base_name)

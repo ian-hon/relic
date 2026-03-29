@@ -3,7 +3,6 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use clap::ArgMatches;
 use similar::{ChangeTag, TextDiff};
 
 use crate::core::{
@@ -16,10 +15,12 @@ use crate::core::{
     tracking::content_set::ContentSet,
     util::{empty_oid, oid_digest},
 };
+use clap::Args;
 
-pub fn test(state: Option<&mut State>, _: &ArgMatches) {
-    let Some(state) = state else { return };
+#[derive(Args)]
+pub struct TestArgs {}
 
+pub fn test(state: &mut State, _args: TestArgs) {
     // b875a2f0b56ec1f409a4f1c8f459eff3dae0ded5b389cf9aed50e10e5c34d001
     // 7780bf9fe8fcc104f7a4ed5966597629fdef49a3d6224da15659879c1628b8df
     // 03a0bdb5f55dca017213ef209e8b81b8fb4ecf61ecf0b8b37892a18ac082e76c <

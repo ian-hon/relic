@@ -1,5 +1,9 @@
-use clap::ArgMatches;
+use clap::Args;
 
-use crate::core::state::State;
+#[derive(Args)]
+pub struct CloneArgs {
+    /// URL of the remote Relic repository
+    pub url: String,
+}
 
-pub fn clone(_: Option<&mut State>, _: &ArgMatches) {}
+pub fn clone(args: CloneArgs) {}

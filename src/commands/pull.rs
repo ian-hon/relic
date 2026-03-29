@@ -1,5 +1,8 @@
-use clap::ArgMatches;
-
 use crate::core::state::State;
+use clap::Args;
 
-pub fn pull(_: Option<&mut State>, _: &ArgMatches) {}
+#[derive(Args)]
+pub struct PullArgs {}
+
+pub fn pull(state: &mut State, _args: PullArgs) {
+}

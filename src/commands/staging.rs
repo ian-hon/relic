@@ -7,11 +7,12 @@ use crate::core::{
     modification::change::Change,
     state::State,
 };
-use clap::ArgMatches;
+use clap::Args;
 
-pub fn staging(state: Option<&mut State>, _: &ArgMatches) {
-    let Some(state) = state else { return };
+#[derive(Args)]
+pub struct StagingArgs {}
 
+pub fn staging(state: &mut State, _args: StagingArgs) {
     let local = match Tree::build_tree(
         &state,
         &state.root_path,

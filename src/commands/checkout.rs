@@ -1,5 +1,3 @@
-use clap::ArgMatches;
-
 use crate::core::{
     branch::branch::{Branch, BranchSource, HeadType},
     data::{commit::Commit, commit_func::CommitState, tree::Tree},
@@ -8,6 +6,34 @@ use crate::core::{
     state::State,
     write,
 };
+use clap::Args;
+
+#[derive(Args)]
+pub struct CheckoutArgs {
+    /// Branch/commit to checkout
+    #[arg(conflicts_with_all = ["all", "local", "upstream"])]
+    pub object: Option<String>,
+
+    /// Create new if no exist
+    #[arg(short, long, action = clap::ArgAction::Count, conflicts_with_all = ["all", "local", "upstream"])]
+    pub new: u8,
+
+    /// Branch to base from
+    #[arg(short, long, conflicts_with_all = ["all", "local", "upstream"])]
+    pub base: Option<String>,
+
+    /// Show all available branches
+    #[arg(short, long, action = clap::ArgAction::Count)]
+    pub all: u8,
+
+    /// List all local branches
+    #[arg(short, long, action = clap::ArgAction::Count)]
+    pub local: u8,
+
+    /// List all upstream branches
+    #[arg(short, long, action = clap::ArgAction::Count)]
+    pub upstream: u8,
+}
 
 /*
 checkout has two functionalities
@@ -29,14 +55,9 @@ checkout has two functionalities
                 create and use as parent commit
 
 */
-pub fn checkout(state: Option<&mut State>, args: &ArgMatches) {
-    let Some(state) = state else { return };
-
-    let (list_all, list_upstream, list_local) = (
-        args.get_count("all") != 0,
-        args.get_count("upstream") != 0,
-        args.get_count("local") != 0,
-    );
+pub fn checkout(state: &mut State, args: CheckoutArgs) {
+    let (list_all, list_upstream, list_local) =
+        (args.all != 0, args.upstream != 0, args.local != 0);
 
     if list_all || list_upstream || list_local {
         let Ok(branches) = Branch::get_all_branches(state) else {
@@ -139,7 +160,7 @@ pub fn checkout(state: Option<&mut State>, args: &ArgMatches) {
 
     // determine whether its an object
     let head = Branch::get_head(state, &BranchSource::Local);
-    let Some(object_name) = args.get_one::<String>("OBJECT") else {
+    let Some(object_name) = args.object else {
         if let Ok(h) = head {
             println!("Current HEAD: {}", h.as_human_readable());
         } else {
@@ -174,8 +195,8 @@ pub fn checkout(state: Option<&mut State>, args: &ArgMatches) {
         return;
     }
 
-    let create_new = args.get_count("new") != 0;
-    let base_branch_name = args.get_one::<String>("base");
+    let create_new = args.new != 0;
+    let base_branch_name = args.base.as_deref();
 
     let base_branch = match base_branch_name {
         Some(n) => {
@@ -197,7 +218,7 @@ pub fn checkout(state: Option<&mut State>, args: &ArgMatches) {
             }
         },
     };
-    match Branch::set_head_branch(object_name.clone(), state) {
+    match Branch::set_head_branch(object_name.to_string(), state) {
         Some(err) => match err {
             RelicError::BranchError(BranchError::BranchDoesntExist) => {
                 println!("Branch/commit '{object_name}' doesn't exist.");
@@ -209,12 +230,12 @@ pub fn checkout(state: Option<&mut State>, args: &ArgMatches) {
                     );
 
                     match Branch::instantiate(
-                        object_name.clone(),
+                        object_name.to_string(),
                         base_branch.get_commit(&state.get_sanctum_path()).ok(),
                         state,
                         &BranchSource::Local,
                     ) {
-                        Ok(_) => match Branch::set_head_branch(object_name.clone(), state) {
+                        Ok(_) => match Branch::set_head_branch(object_name.to_string(), state) {
                             Some(e) => println!("Can't update branch: {e:?}"),
                             None => println!("Successfully changed branch to '{object_name}'."),
                         },

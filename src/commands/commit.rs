@@ -1,7 +1,5 @@
 use std::path::Path;
 
-use clap::ArgMatches;
-
 use crate::core::{
     branch::branch::{Branch, BranchSource, HeadType, DEFAULT_BRANCH},
     data::{commit::Commit, tree::Tree},
@@ -11,14 +9,21 @@ use crate::core::{
     state::State,
     util::get_time,
 };
+use clap::Args;
 
-pub fn commit(state: Option<&mut State>, args: &ArgMatches) {
-    let Some(state) = state else { return };
+#[derive(Args)]
+pub struct CommitArgs {
+    /// Commit message
+    #[arg(short, long)]
+    pub message: String,
 
-    let message = args.get_one::<String>("message").unwrap().clone();
-    let description = args
-        .get_one::<String>("description")
-        .map_or("".to_string(), String::clone);
+    /// Commit description
+    #[arg(short, long)]
+    pub description: Option<String>,
+}
+
+pub fn commit(state: &mut State, args: CommitArgs) {
+    let description = args.description.as_deref().unwrap_or("");
 
     let tree = match Tree::build_tree(
         &state,
@@ -73,8 +78,8 @@ pub fn commit(state: Option<&mut State>, args: &ArgMatches) {
                         vec![],
                         get_time(),
                         "none".to_string(),
-                        message,
-                        description,
+                        args.message.clone(),
+                        description.to_string(),
                         &state.get_sanctum_path(),
                     );
 
@@ -92,8 +97,8 @@ pub fn commit(state: Option<&mut State>, args: &ArgMatches) {
                         vec![],
                         get_time(),
                         "none".to_string(),
-                        message,
-                        description,
+                        args.message.clone(),
+                        description.to_string(),
                         &state.get_sanctum_path(),
                     );
 
@@ -116,8 +121,8 @@ pub fn commit(state: Option<&mut State>, args: &ArgMatches) {
                     vec![],
                     get_time(),
                     "none".to_string(),
-                    message,
-                    description,
+                    args.message,
+                    description.to_string(),
                     &state.get_sanctum_path(),
                 );
 

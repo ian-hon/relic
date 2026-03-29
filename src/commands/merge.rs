@@ -1,15 +1,18 @@
-use clap::ArgMatches;
-
 use crate::core::{
     branch::branch::{Branch, BranchSource, HeadType},
     error::{MergeError, RelicError},
     state::State,
 };
+use clap::Args;
 
-pub fn merge(state: Option<&mut State>, args: &ArgMatches) {
-    let Some(state) = state else { return };
+#[derive(Args)]
+pub struct MergeArgs {
+    /// Topic/feature branch
+    pub branch: String,
+}
 
-    let feature_name = args.get_one::<String>("BRANCH").unwrap();
+pub fn merge(state: &mut State, args: MergeArgs) {
+    let feature_name = &args.branch;
     let feature_branches = Branch::construct_from_name_all(state, feature_name);
     let Some(feature) = feature_branches.first() else {
         println!("No branch exists with name \"{feature_name}\"");

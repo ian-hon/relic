@@ -1,17 +1,15 @@
 use std::path::PathBuf;
 
 use crate::core::state::State;
-use clap::ArgMatches;
+use clap::Args;
 
-pub fn untrack(state: Option<&mut State>, args: &ArgMatches) {
-    let Some(state) = state else { return };
+#[derive(Args)]
+pub struct UntrackArgs {
+    /// Paths to untrack (* for all)
+    pub paths: Vec<PathBuf>,
+}
 
-    let paths = args
-        .get_many::<PathBuf>("PATHS")
-        .unwrap()
-        .map(|x| x.clone())
-        .collect::<Vec<PathBuf>>();
-
-    state.tracking_set.remove(paths);
+pub fn untrack(state: &mut State, args: UntrackArgs) {
+    state.tracking_set.remove(args.paths);
     state.update_tracking_set();
 }

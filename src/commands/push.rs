@@ -1,4 +1,8 @@
 use crate::core::state::State;
-use clap::ArgMatches;
+use clap::Args;
 
-pub fn push(_: Option<&mut State>, _: &ArgMatches) {}
+#[derive(Args)]
+pub struct PushArgs {}
+
+pub fn push(state: &mut State, _args: PushArgs) {
+}

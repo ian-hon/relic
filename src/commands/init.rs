@@ -1,5 +1,6 @@
-use clap::ArgMatches;
+use clap::Args;
 
-use crate::core::state::State;
+#[derive(Args)]
+pub struct InitArgs {}
 
-pub fn init(_: Option<&mut State>, _: &ArgMatches) {}
+pub fn init(_args: InitArgs) {}

@@ -1,5 +1,10 @@
-use clap::ArgMatches;
-
 use crate::core::state::State;
+use clap::Args;
 
-pub fn pending(_: Option<&mut State>, _: &ArgMatches) {}
+#[derive(Args)]
+pub struct PendingArgs {
+    /// Commit number.
+    pub commit: Vec<String>,
+}
+
+pub fn pending(state: &mut State, _args: PendingArgs) {}
