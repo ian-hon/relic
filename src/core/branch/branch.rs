@@ -348,6 +348,14 @@ impl HeadType {
         Err(RelicError::ConfigurationIncorrect)
     }
 
+    pub fn as_human_readable(&self) -> String {
+        match self {
+            HeadType::Branch(b) => format!("Branch ({})", b.name),
+            HeadType::Detached(c) => format!("Detached ({})", c.oid.to_string()),
+            HeadType::Empty => format!("Unset"),
+        }
+    }
+
     pub fn get_commit(self, sanctum_path: &PathBuf) -> Result<Option<Commit>, RelicError> {
         match self {
             HeadType::Branch(b) => b.get_commit(sanctum_path).and_then(|c| Ok(Some(c))),

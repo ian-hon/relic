@@ -137,11 +137,16 @@ pub fn checkout(state: Option<&mut State>, args: &ArgMatches) {
         return;
     }
 
+    // determine whether its an object
+    let head = Branch::get_head(state, &BranchSource::Local);
     let Some(object_name) = args.get_one::<String>("OBJECT") else {
-        println!("Commit/object not specified.");
+        if let Ok(h) = head {
+            println!("Current HEAD: {}", h.as_human_readable());
+        } else {
+            println!("Can't fetch HEAD. {RELIC_ERROR_CORRUPTED}");
+        }
         return;
     };
-    // determine whether its an object
     if let Some(c) = ObjectID::from_string(&object_name)
         .and_then(|o| o.construct_strict::<Commit>(&state.get_sanctum_path()))
     {
@@ -154,7 +159,7 @@ pub fn checkout(state: Option<&mut State>, args: &ArgMatches) {
             println!("Can't checkout commit: {e:?}");
         }
 
-        if let Ok(h) = Branch::get_head(state, &BranchSource::Local) {
+        if let Ok(h) = head {
             if let Ok(Some(c)) = h.get_commit(&state.get_sanctum_path()) {
                 write::write_tree(
                     &state.root_path.join("playground"),

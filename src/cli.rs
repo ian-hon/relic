@@ -106,10 +106,11 @@ naively reinvent the wheel."#,
             command_module::checkout,
             Command::new("checkout")
                 .about("Switches to specified branch. Use -n to create new branch if it doesn't exist.")
-                .arg_required_else_help(true)
-                .arg(arg!([OBJECT]... "Branch/commit to checkout").required(true).conflicts_with_all(["all", "local", "upstream"]))
-                .arg(arg!(-b --base <BASE> "Branch to base from").conflicts_with_all(["all", "local", "upstream"]))
+                .arg(arg!([OBJECT] "Branch/commit to checkout").conflicts_with_all(["all", "local", "upstream"]))
+
                 .arg(arg!(-n --new <NEW> "Create new if no exist").action(clap::ArgAction::Count).conflicts_with_all(["all", "local", "upstream"]))
+                .arg(arg!(-b --base <BASE> "Branch to base from").conflicts_with_all(["all", "local", "upstream"]))
+
                 .arg(arg!(-a --all <ALL> "Show all available branches").action(clap::ArgAction::Count))
                 .arg(arg!(-l --local <LOCAL> "List all local branches").action(clap::ArgAction::Count))
                 .arg(arg!(-u --upstream <UPSTREAM> "List all upstream branches").action(clap::ArgAction::Count)),

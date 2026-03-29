@@ -76,13 +76,13 @@ pub fn status(state: Option<&mut State>, args: &ArgMatches) {
         CommitState::Ahead(v) => {
             println!("{} is ahead by {} commits.", pair.0 .1, v.len());
             for c in v {
-                println!("{}", c.get_nickname(false));
+                println!("{}", c.get_nickname(true));
             }
         }
         CommitState::Behind(v) => {
             println!("{} is behind by {} commits.", pair.0 .1, v.len());
             for c in v {
-                println!("{}", c.get_nickname(false));
+                println!("{}", c.get_nickname(true));
             }
         }
         CommitState::Tie => {
@@ -93,7 +93,7 @@ pub fn status(state: Option<&mut State>, args: &ArgMatches) {
                 "Divergence between {} and {}. Last common ancestor:\n{}",
                 pair.0 .1,
                 pair.1 .1,
-                ancestor.get_nickname(false)
+                ancestor.get_nickname(true)
             );
         }
         CommitState::None => {
