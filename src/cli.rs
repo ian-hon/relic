@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::{commands as command_module, core::state::State};
 use clap::{Parser, Subcommand};
@@ -79,7 +79,7 @@ pub fn build() -> Cli {
 pub fn handle(cli: Cli, path: &Path) {
     match cli.command {
         Commands::Init(args) => {
-            command_module::init(args);
+            command_module::init(&path.to_path_buf(), args);
         }
         Commands::Clone(args) => {
             command_module::clone(args);

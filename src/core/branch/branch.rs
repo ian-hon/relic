@@ -181,9 +181,9 @@ impl Branch {
 
         if let Some(b) = Branch::construct_from_name(&name, state, &BranchSource::Local) {
             let file_path = state.get_head_path();
-            if !file_path.exists() {
-                return Some(RelicError::IOError(IOError::FileNoExist));
-            }
+            // if !file_path.exists() {
+            //     return Some(RelicError::IOError(IOError::FileNoExist));
+            // }
 
             if let Ok(()) = fs::write(file_path, HeadType::Branch(b).to_string()) {
                 return None;
@@ -314,7 +314,7 @@ impl BranchSource {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum HeadType {
     Empty,
     Branch(Branch),

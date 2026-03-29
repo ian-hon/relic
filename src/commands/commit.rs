@@ -54,7 +54,9 @@ pub fn commit(state: &mut State, args: CommitArgs) {
         match head {
             HeadType::Branch(b) => {
                 // use head as parent
-                if let Ok(previous_commit) = b.clone().get_commit(&state.get_sanctum_path()) {
+                let result_commit = if let Ok(previous_commit) =
+                    b.clone().get_commit(&state.get_sanctum_path())
+                {
                     if previous_commit.tree == tree.get_oid() {
                         println!("No changes to commit.");
                         return;
@@ -90,7 +92,18 @@ pub fn commit(state: &mut State, args: CommitArgs) {
                             b.name, e
                         );
                     }
+
+                    c
                 } else {
+                    let c = Change::get_change_all(
+                        &Tree::empty(),
+                        &tree,
+                        &state.get_sanctum_path(),
+                        &state.root_path,
+                    );
+
+                    println!("{}", c.as_human_readable(&tree, &state.get_sanctum_path()));
+
                     let c = Commit::new(
                         tree.get_oid(),
                         None,
@@ -109,7 +122,14 @@ pub fn commit(state: &mut State, args: CommitArgs) {
                             b.name, e
                         );
                     }
-                }
+
+                    c
+                };
+
+                println!(
+                    "Sucessfully committed changes.\n{}",
+                    result_commit.get_nickname(true)
+                );
             }
             HeadType::Detached(_) => {
                 println!("Unable to commit. Currently in detached HEAD mode.\nTo make changes, please checkout a branch.")

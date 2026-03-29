@@ -35,9 +35,41 @@ pub struct State {
     pub ignore_set: ContentSet,
 }
 impl State {
-    pub fn initialise() -> Option<State> {
+    pub fn initialise(root_path: &PathBuf) -> Option<State> {
         // creates all relevant files & folders at specified root path
-        None
+
+        let relic_path = root_path.join(RELIC_PATH);
+        if !relic_path.exists() {
+            fs::create_dir(&relic_path).ok()?;
+        }
+
+        let branches_path = relic_path.join(BRANCHES_PATH);
+        if !branches_path.exists() {
+            fs::create_dir(&branches_path).ok()?;
+        }
+
+        let local_branches_path = branches_path.join(LOCAL_BRANCHES_PATH);
+        let upstream_branches_path = branches_path.join(UPSTREAM_BRANCHES_PATH);
+        if !(local_branches_path.exists() && upstream_branches_path.exists()) {
+            fs::create_dir(&local_branches_path).ok()?;
+            fs::create_dir(&upstream_branches_path).ok()?;
+        }
+
+        let tracking_path = relic_path.join(TRACKED_PATH);
+        if !tracking_path.exists() {
+            fs::write(&tracking_path, "").ok()?;
+        }
+
+        let tracking_set = ContentSet::construct(&relic_path.join(TRACKED_PATH)).ok()?;
+
+        let ignore_set =
+            ContentSet::construct(&root_path.join(RELIC_IGNORE_PATH)).unwrap_or(ContentSet::new());
+
+        Some(State {
+            root_path: root_path.clone(),
+            tracking_set,
+            ignore_set,
+        })
     }
 
     pub fn construct(root_path: PathBuf) -> Option<State> {
@@ -59,7 +91,8 @@ impl State {
         }
 
         let tracking_set = ContentSet::construct(&relic_path.join(TRACKED_PATH)).ok()?;
-        let ignore_set = ContentSet::construct(&root_path.join(RELIC_IGNORE_PATH)).ok()?;
+        let ignore_set =
+            ContentSet::construct(&root_path.join(RELIC_IGNORE_PATH)).unwrap_or(ContentSet::new());
 
         Some(State {
             root_path,
