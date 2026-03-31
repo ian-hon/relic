@@ -39,6 +39,8 @@ pub struct Commit {
     pub message: String,     // url encoded when saved
     pub description: String, // url encoded when saved
 }
+
+// use pubkey as the uniq id
 impl Commit {
     pub fn new(
         tree: ObjectID,

@@ -19,6 +19,8 @@ readme = false
 
 [dependencies]
 sha2 = "0.10.9"
+num-bigint = "0.4.6"
+glass_pumpkin = "1.10.0"
 
 strum = "0.26.3"
 strum_macros = "0.26.3"
@@ -34,3 +36,4 @@ clap = { version = "4.5.38", features = ["derive"]}
 
 similar = "2.7.0"
 # diff = "0.1.13"
+#

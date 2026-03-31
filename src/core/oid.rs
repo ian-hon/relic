@@ -3,6 +3,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use num_bigint::BigUint;
+
 use crate::core::{
     data::{blob::Blob, commit::Commit, tree::Tree},
     error::{IOError, RelicError, SanctumError},
@@ -135,6 +137,12 @@ impl ObjectID {
 impl Into<ObjectID> for [u8; 32] {
     fn into(self) -> ObjectID {
         ObjectID(self)
+    }
+}
+
+impl Into<BigUint> for ObjectID {
+    fn into(self) -> BigUint {
+        BigUint::from_bytes_be(self.0.as_slice())
     }
 }
 

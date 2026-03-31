@@ -1,12 +1,16 @@
 use std::{
     io::empty,
     path::{Path, PathBuf},
+    str::FromStr,
 };
 
+use num_bigint::BigUint;
+use sha2::{Digest, Sha256};
 use similar::{ChangeTag, TextDiff};
 
 use crate::core::{
     branch::branch::{Branch, BranchSource, HeadType},
+    credentials::{self, FiatShamirProof, ProverContext, VerifierContext},
     data::{blob::Blob, commit::Commit, tree::Tree},
     modification::change::Change,
     object::{Object, ObjectLike},
@@ -192,30 +196,50 @@ pub fn test(state: &mut State, _args: TestArgs) {
 
     // println!("");
 
-    for (b, s) in Branch::get_all_branches(state).unwrap() {
-        // println!(
-        //     "{b}: {}",
-        //     s.iter()
-        //         .map(|i| format!("{:?}", i.0))
-        //         .collect::<Vec<String>>()
-        //         .join(", ")
-        // );
+    // for (b, s) in Branch::get_all_branches(state).unwrap() {
+    //     // println!(
+    //     //     "{b}: {}",
+    //     //     s.iter()
+    //     //         .map(|i| format!("{:?}", i.0))
+    //     //         .collect::<Vec<String>>()
+    //     //         .join(", ")
+    //     // );
 
-        if b.eq("lorem") {
-            continue;
-        }
+    //     if b.eq("lorem") {
+    //         continue;
+    //     }
 
-        println!("{}", b);
-        for p in Branch::construct_from_name(&b, state, &BranchSource::Local)
-            .unwrap()
-            .get_commit(&state.get_sanctum_path())
-            .unwrap()
-            .get_all_parents(&state.get_sanctum_path())
-        {
-            println!("{}", p.get_nickname(true));
-        }
-        println!()
-    }
+    //     println!("{}", b);
+    //     for p in Branch::construct_from_name(&b, state, &BranchSource::Local)
+    //         .unwrap()
+    //         .get_commit(&state.get_sanctum_path())
+    //         .unwrap()
+    //         .get_all_parents(&state.get_sanctum_path())
+    //     {
+    //         println!("{}", p.get_nickname(true));
+    //     }
+    //     println!()
+    // }
+
+    // println!("{}", BigUint::from_bytes_be(&20u128.to_be_bytes()));
+
+    // 91634880152443617534842621287039938041581081254914058002978601050179556493499
+    // 28106838057724633541991236405213533498809717615002287594759165789551252471965
+    // 21027550693477535543327579570081618952892630736730429980018215117041635618758
+    // 21027550693477535543327579570081
+
+    // 7700013830284619221829551641861
+
+    // let a = BigUint::from_bytes_be(Sha256::digest(&"a").as_slice());
+    // let b = BigUint::from_bytes_be(Sha256::digest(&"b").as_slice());
+    // let c = BigUint::from_str("21027550693477535543327579570081").unwrap();
+
+    // // println!("{a}");
+    // // println!("{b}");
+    // // println!("{c}");
+
+    // let r = a.modpow(&b, &c);
+    // println!("{r}");
 
     /*
     earth: 48aa92ff9395abe218782324ad2c195152565ba7d57c0cc3358afa9f1b1d3378
@@ -225,6 +249,18 @@ pub fn test(state: &mut State, _args: TestArgs) {
      */
 
     // println!();
+
+    let h = |s: &str| {
+        return BigUint::from_bytes_be(Sha256::digest(s).as_slice());
+    };
+
+    // let pc = ProverContext
+    let vc = VerifierContext::new(h("blah blah blah"), None).unwrap();
+    let pc = ProverContext::new(h("z"), &vc);
+
+    assert!(pc.create_proof(h("s"), &vc).verify(&vc));
+    assert!(pc.create_proof(h("2"), &vc).verify(&vc));
+    assert!(pc.create_proof(h("3"), &vc).verify(&vc));
 
     // for p in Branch::construct_from_name("new_branch", state, &BranchSource::Upstream)
     //     .unwrap()
