@@ -17,3 +17,9 @@ target/
 #.idea/
 
 .DS_Store
+
+.relic/
+
+lorem/ipsum/
+
+playground/*
