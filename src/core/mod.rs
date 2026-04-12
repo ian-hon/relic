@@ -1,16 +1,16 @@
-pub mod paths;
-
 pub mod error;
+pub mod util;
 
-pub mod objects;
-pub mod utils;
+pub mod object;
+pub mod oid;
 
-pub mod relic;
-pub mod relic_info;
+pub mod modification;
+pub mod tracking;
+
+pub mod write;
+
+pub mod branch;
+pub mod data;
 pub mod state;
 
-pub mod commit;
-
-pub use objects::{content_set, modifications, Blob, Content, ContentMutRef, Tree};
-pub use relic_info::RelicInfo;
-pub use state::State;
+pub mod credentials;

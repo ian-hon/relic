@@ -1,37 +1,72 @@
-pub mod add;
-pub mod branch;
-pub mod cherry;
+/*
+staging -> pending -> remote
+
+misc:
+init
+    create relic repo
+detach
+    remove relic repo; confirmation needed
+clone
+    clone repo from URL
+status
+    show status for staging, pending and remote
+
+staging:
+staging
+    view diffs
+track
+    track files
+untrack
+    untrack files
+
+pending:
+pending
+    view all pending commits (not on remote yet)
+commit
+    creates new commit based on changes
+
+remote:
+push
+    pushes commits to remote
+pull
+    pulls commits from remote
+
+branch:
+checkout
+    changes checked out branch to new one, if doesnt exist, creates it
+
+*/
+
+pub mod checkout;
 pub mod clone;
 pub mod commit;
 pub mod detach;
-pub mod fetch;
 pub mod init;
+pub mod merge;
 pub mod pending;
 pub mod pull;
 pub mod push;
 pub mod qhar;
-pub mod remove;
-pub mod rollback;
 pub mod staging;
-pub mod stash;
+pub mod status;
 pub mod test;
+pub mod track;
 pub mod tree;
+pub mod untrack;
 
-pub use add::add;
-pub use branch::branch;
-pub use cherry::cherry;
-pub use clone::clone;
-pub use commit::commit;
-pub use detach::detach;
-pub use fetch::fetch;
-pub use init::init;
-pub use pending::pending;
-pub use pull::pull;
-pub use push::push;
-pub use qhar::qhar;
-pub use remove::remove;
-pub use rollback::rollback;
-pub use staging::staging;
-pub use stash::{restore, stash};
-pub use test::test;
-pub use tree::tree;
+pub use checkout::{checkout, CheckoutArgs};
+pub use clone::{clone, CloneArgs};
+pub use commit::{commit, CommitArgs};
+pub use detach::{detach, DetachArgs};
+pub use init::{init, InitArgs};
+pub use merge::{merge, MergeArgs};
+pub use pending::{pending, PendingArgs};
+pub use pull::{pull, PullArgs};
+pub use push::{push, PushArgs};
+pub use qhar::{qhar, QharArgs};
+pub use staging::{staging, StagingArgs};
+pub use status::{status, StatusArgs};
+pub use test::{test, TestArgs};
+pub use track::{track, TrackArgs};
+pub use tree::{tree, TreeArgs};
+pub use untrack::{untrack, UntrackArgs};

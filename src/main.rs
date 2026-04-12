@@ -1,16 +1,17 @@
-use std::path::PathBuf;
+use std::path::Path;
 
 mod core;
 
 mod cli;
 mod commands;
 
-use crate::core::state::State;
+/*
+get ref system working
+
+
+*/
 
 fn main() {
-    let command_handler = cli::build();
-    let state = State::create(PathBuf::from("."));
-    let args = command_handler.handler.clone().get_matches();
-
-    cli::handle(command_handler, args, state);
+    let cli = cli::build();
+    cli::handle(cli, Path::new("."));
 }

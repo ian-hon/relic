@@ -1,215 +1,139 @@
-use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
-use clap::{arg, value_parser, ArgMatches, Command};
+use crate::{commands as command_module, core::state::State};
+use clap::{Parser, Subcommand};
 
-use crate::commands as command_module;
-use crate::core::error::RelicError;
-use crate::core::state::State;
+#[derive(Parser)]
+#[command(name = "Relic")]
+#[command(about = r#"This is the Relic Version Control System.
 
-// add
-// commit {message}
-// push
-// pull
-// fetch
-// branch {name}
-//      will change to that branch
-//      if branch doesnt exist, create
-//      ask to create stash (if changes present)
-// stash {name|optional}
-//      stashes are bound to a branch
-//      optional to have a name
-// restore
-//      select stash to restore
-// rollback
-//      resets to current head
-// cherry {commit hash}
+Relic is a CAS + Merkle DAG (Directed
+Acyclic Graph) using SHA256. Objects are
+stored inside ./.relic/sanctum/.
 
-pub type CommandType = fn(&mut State, &ArgMatches);
-
-pub struct CommandHandler {
-    commands: HashMap<String, CommandType>,
-    pub handler: Command,
+I wanted to truly understand how Git
+works, so I made Relic. Everyone knows
+the best way to learn is to stupidly and
+naively reinvent the wheel."#)]
+#[command(arg_required_else_help = true)]
+pub struct Cli {
+    #[command(subcommand)]
+    pub command: Commands,
 }
 
-pub fn build() -> CommandHandler {
-    let mut command_handler = Command::new("relic")
-        .about(
-            r#"This is the Relic Version Control System.
+#[derive(Subcommand)]
+pub enum Commands {
+    /// Initialises a Relic repository in the current directory.
+    Init(command_module::init::InitArgs),
 
-The best way to learn is to stupidly and
-blindly reinvent the wheel.
+    /// Clone a remote Relic repository in the current directory.
+    Clone(command_module::clone::CloneArgs),
 
-Relic is a simple hobby project, because
-remaking Git sounded fun and interesting.
+    /// Completely removes Relic from the current directory.
+    Detach(command_module::detach::DetachArgs),
 
-Most common features like committing,
-pushing and pulling, are implemented."#,
-        )
-        .subcommand_required(true)
-        .arg_required_else_help(true);
+    /// View all staging changes.
+    Staging(command_module::staging::StagingArgs),
 
-    type CommandType = fn(&mut State, &ArgMatches);
-    let mut commands: HashMap<String, CommandType> = HashMap::new();
-    for (f, c) in HashMap::<CommandType, clap::Command>::from_iter::<
-        Vec<(CommandType, clap::Command)>,
-    >(vec![
-        (
-            command_module::init,
-            Command::new("init").about("Initialises a Relic repository in the current directory."),
-        ),
-        (
-            command_module::clone,
-            Command::new("clone").about("Clone a remote Relic repository in the current directory.")
-            .arg_required_else_help(true)
-            .arg(
-                arg!([URL] "URL of the remote Relic repository")
-                .required(true)
-            )
-        ),
-        (
-            command_module::detach,
-            Command::new("detach").about("Completely removes Relic from the current directory.")
-        ),
-        (
-            command_module::add,
-            Command::new("add")
-                .about("Adds a file(s) to staging")
-                .arg_required_else_help(true)
-                .arg(
-                    arg!([FILE]... "File(s) to add (* for all)")
-                        .required(true)
-                        .value_parser(value_parser!(PathBuf)),
-                ),
-        ),
-        (
-            command_module::remove,
-            Command::new("remove")
-                .about("Removes a file(s) to staging")
-                .arg_required_else_help(true)
-                .arg(
-                    arg!([FILE]... "File(s) to remove (* for all)")
-                        .required(true)
-                        .value_parser(value_parser!(PathBuf)),
-                ),
-        ),
-        (
-            command_module::commit,
-            Command::new("commit")
-                .about("Commit current changes.")
-                .arg_required_else_help(true)
-                .arg(arg!(-m --message <MESSAGE> "Commit message").required(true))
-                .arg(arg!(-d --description <DESCRIPTION> "Commit description")),
-        ),
-        (
-            command_module::push,
-            Command::new("push").about("Pushes local changes to remote."),
-        ),
-        (
-            command_module::pull,
-            Command::new("pull").about("Pull changes from remote to local."),
-        ),
-        (
-            command_module::fetch,
-            Command::new("fetch").about("Check remote for new changes."),
-        ),
-        (
-            command_module::branch,
-            Command::new("branch").about("")
-        ),
-        (
-            command_module::stash,
-            Command::new("stash")
-                // pseudo-commits basically
-                // clear stash after a commit
-                // stash create
-                // stash view
-                // stash restore
-                // stash delete
-                .about(""),
-        ),
-        (
-            command_module::restore,
-            Command::new("restore"), // unimplemented
-        ),
-        (
-            command_module::rollback,
-            Command::new("rollback").about("Discard all current changes. Rolls back to most recent commit (or pending commit)."),
-        ),
-        (
-            command_module::cherry,
-            Command::new("cherry").about("Go to specific commit."),
-        ),
-        (
-            command_module::tree,
-            Command::new("tree").about("Generate content tree of current directory."),
-        ),
-        (
-            command_module::staging,
-            Command::new("staging").about("View all staging changes."),
-        ),
-        (
-            command_module::pending,
-            Command::new("pending").about("View all pending commits.")
-                .arg(arg!([COMMIT]... "Commit number."))
-        ),
-        (
-            command_module::qhar,
-            Command::new("qhar").about("??")
-        ),
-        (
-            command_module::test,
-            Command::new("test").about("this is here for debug purposes")
-        )
-    ]) {
-        commands.insert(c.get_name().to_string(), f);
-        command_handler = command_handler.subcommand(c);
-    }
+    /// Adds paths to be tracked
+    Track(command_module::track::TrackArgs),
 
-    CommandHandler {
-        handler: command_handler,
-        commands: commands,
-    }
+    /// Removes paths from being tracked
+    Untrack(command_module::untrack::UntrackArgs),
+
+    /// View all pending commits.
+    Pending(command_module::pending::PendingArgs),
+
+    /// Commit current changes.
+    Commit(command_module::commit::CommitArgs),
+
+    /// Pushes pending commits to remote.
+    Push(command_module::push::PushArgs),
+
+    /// Pull pending commits from remote to local.
+    Pull(command_module::pull::PullArgs),
+
+    /// Switches to specified branch. Use -n to create new branch if it doesn't exist.
+    Checkout(command_module::checkout::CheckoutArgs),
+
+    /// Merges the selected branch into the current branch.
+    Merge(command_module::merge::MergeArgs),
+
+    /// Generate content tree of current directory.
+    Tree(command_module::tree::TreeArgs),
+
+    /// View status between branches.
+    Status(command_module::status::StatusArgs),
+
+    /// ??
+    Qhar(command_module::qhar::QharArgs),
+
+    /// This is here for debug purposes
+    Test(command_module::test::TestArgs),
 }
 
-pub fn handle(command_handler: CommandHandler, args: ArgMatches, state: Result<State, RelicError>) {
-    let (command_name, sub_matches) = args.subcommand().unwrap();
+pub fn build() -> Cli {
+    Cli::parse()
+}
 
-    // TODO : shorten and undry this
-    if let Ok(mut s) = state {
-        match command_name {
-            "clone" | "init" => {
-                // let this run only for
-                // clone, init
-                println!("Unable to '{command_name}' an already existing Relic repository.");
-                return;
-            }
-            _ => match command_handler.commands.get(command_name) {
-                Some(command) => {
-                    command(&mut s, sub_matches);
-                }
-                None => {
-                    unimplemented!("Relic Error, command not defined.");
-                }
-            },
+pub fn handle(cli: Cli, path: &Path) {
+    match cli.command {
+        Commands::Init(args) => {
+            command_module::init(&path.to_path_buf(), args);
         }
-    } else {
-        match command_name {
-            "clone" | "init" => {
-                // let this run only for
-                // clone, init
-                match command_handler.commands.get(command_name) {
-                    Some(command) => {
-                        command(&mut State::empty(), sub_matches);
-                    }
-                    None => {
-                        unimplemented!("Relic Error, command not defined.");
-                    }
-                }
-            }
-            _ => {
+        Commands::Clone(args) => {
+            command_module::clone(args);
+        }
+        _ => {
+            let Some(mut state) = State::construct(path.into()) else {
                 println!("No valid Relic repository found in current directory. Consider executing 'relic init' or 'relic clone'.");
                 return;
+            };
+
+            match cli.command {
+                Commands::Init(_) | Commands::Clone(_) => unreachable!(),
+                Commands::Detach(args) => {
+                    command_module::detach(&mut state, args);
+                }
+                Commands::Staging(args) => {
+                    command_module::staging(&mut state, args);
+                }
+                Commands::Track(args) => {
+                    command_module::track(&mut state, args);
+                }
+                Commands::Untrack(args) => {
+                    command_module::untrack(&mut state, args);
+                }
+                Commands::Pending(args) => {
+                    command_module::pending(&mut state, args);
+                }
+                Commands::Commit(args) => {
+                    command_module::commit(&mut state, args);
+                }
+                Commands::Push(args) => {
+                    command_module::push(&mut state, args);
+                }
+                Commands::Pull(args) => {
+                    command_module::pull(&mut state, args);
+                }
+                Commands::Checkout(args) => {
+                    command_module::checkout(&mut state, args);
+                }
+                Commands::Merge(args) => {
+                    command_module::merge(&mut state, args);
+                }
+                Commands::Tree(args) => {
+                    command_module::tree(&mut state, args);
+                }
+                Commands::Status(args) => {
+                    command_module::status(&mut state, args);
+                }
+                Commands::Qhar(args) => {
+                    command_module::qhar(&mut state, args);
+                }
+                Commands::Test(args) => {
+                    command_module::test(&mut state, args);
+                }
             }
         }
     }

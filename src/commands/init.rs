@@ -1,32 +1,35 @@
-use std::fs;
+use std::path::PathBuf;
 
-use clap::ArgMatches;
+use clap::Args;
 
-use crate::core::{content_set, objects::data::Upstream, paths, RelicInfo, State};
+use crate::core::{
+    branch::branch::{Branch, BranchSource, DEFAULT_BRANCH},
+    state::State,
+};
 
-pub fn init(_: &mut State, _: &ArgMatches) {
-    // create
-    // .relic
-    //      history/ (empty)
-    //      pending/ (empty)
-    //      root (empty)
-    //      tracked (empty)
-    //      upstream (empty)
-    // .relic_ignore (use default (const in content_set))
+#[derive(Args)]
+pub struct InitArgs {}
 
-    // if origin is set
-    // update root
-    // update upstream
+pub fn init(path: &PathBuf, _args: InitArgs) {
+    let Some(state) = State::initialise(path) else {
+        println!("Unable to initialise a Relic repository.");
+        return;
+    };
 
-    let _ = fs::create_dir(paths::RELIC_PATH_PARENT);
-    let _ = fs::create_dir(paths::RELIC_PATH_HISTORY);
-    let _ = fs::create_dir(paths::RELIC_PATH_PENDING);
-    let _ = fs::write(paths::RELIC_PATH_INFO, RelicInfo::default().serialise());
-    let _ = fs::write(paths::RELIC_PATH_ROOT, "");
-    let _ = fs::write(paths::RELIC_PATH_TRACKED, "");
-    let _ = fs::write(paths::RELIC_PATH_UPSTREAM, Upstream::empty().serialise());
+    // make main branch
+    if let Err(e) = Branch::instantiate(
+        DEFAULT_BRANCH.to_string(),
+        None,
+        &state,
+        &BranchSource::Local,
+    ) {
+        println!("Error creating branch: {e:?}");
+        return;
+    };
 
-    let _ = fs::write(paths::RELIC_PATH_IGNORE, content_set::DEFAULT_IGNORE);
+    if let Some(e) = Branch::set_head_branch(DEFAULT_BRANCH.to_string(), &state) {
+        println!("Error setting HEAD: {e:?}");
+    }
 
-    println!("Empty Relic repository created.");
+    println!("Relic repository initialised successfully.");
 }

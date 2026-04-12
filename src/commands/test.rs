@@ -1,18 +1,27 @@
-use clap::ArgMatches;
+use crate::core::{
+    credentials::{signature::Signature, Identity},
+    state::State,
+};
+use clap::Args;
 
-use crate::core::{content_set::TrackingSet, State};
+#[derive(Args)]
+pub struct TestArgs {}
 
-pub fn test(s: &mut State, _: &ArgMatches) {
-    let c = s.get_changes();
-    println!("trees: {:?}\n\n", c.trees);
+pub fn test(_: &mut State, _args: TestArgs) {
+    let identity = Identity::new("hmmm", "hii");
 
-    let t = s.track_set.initialise(&mut s.current);
+    let private_key = Signature::generate(&identity).unwrap();
+    let public_key = private_key.public_key();
 
-    println!("content set: {:?}\n\n", t.directories);
+    println!("COMMENT: {}", public_key.comment());
 
-    println!(
-        "{:?}",
-        // s.get_changes()
-        c.filter_changes(&t).trees
-    );
+    let data = b"commit data to sign";
+    let signature = Signature::sign(data, &private_key).unwrap();
+
+    let r = signature.serialise();
+    println!("{r}");
+
+    println!("{:?}", Signature::deserialise(&r));
+
+    println!("Valid: {}", signature.verify(public_key, data));
 }

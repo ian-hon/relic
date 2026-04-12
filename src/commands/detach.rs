@@ -1,12 +1,7 @@
-use std::fs;
+use crate::core::state::State;
+use clap::Args;
 
-use clap::ArgMatches;
+#[derive(Args)]
+pub struct DetachArgs {}
 
-use crate::core::{paths, State};
-
-pub fn detach(_: &mut State, _: &ArgMatches) {
-    let _ = fs::remove_dir_all(paths::RELIC_PATH_PARENT);
-    let _ = fs::remove_file(paths::RELIC_PATH_IGNORE);
-
-    println!("Relic repository successfully removed.");
-}
+pub fn detach(state: &mut State, _args: DetachArgs) {}

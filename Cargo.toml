@@ -18,10 +18,15 @@ repository = "https://github.com/ian-hon/relic"
 readme = false
 
 [dependencies]
-sha256 = "1.5.0"
+sha2 = "0.10.9"
+ssh-key = { version = "0.6.7", features = ["ed25519", "rsa"] }
+ssh-encoding = "0.2.0"
+signature = "2.2.0"
+rand = "0.10.0"
 
 strum = "0.26.3"
 strum_macros = "0.26.3"
+base64 = "0.22.1"
 
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -30,7 +35,7 @@ unescape = "0.1.0"
 chrono = "0.4.41"
 
 dotenv = "0.15.0"
-clap = "4.5.38"
+clap = { version = "4.5.38", features = ["derive"]}
 
 similar = "2.7.0"
 # diff = "0.1.13"

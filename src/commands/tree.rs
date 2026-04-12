@@ -1,7 +1,8 @@
-use clap::ArgMatches;
+use crate::core::state::State;
+use clap::Args;
 
-use crate::core::{utils, State};
+#[derive(Args)]
+pub struct TreeArgs {}
 
-pub fn tree(s: &mut State, _: &ArgMatches) {
-    println!("{}", utils::generate_tree(&s.current));
+pub fn tree(state: &mut State, _args: TreeArgs) {
 }
