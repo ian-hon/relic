@@ -82,8 +82,10 @@ pub fn commit(state: &mut State, args: CommitArgs) {
                         "none".to_string(),
                         args.message.clone(),
                         description.to_string(),
-                        &state.get_sanctum_path(),
+                        vec![],
                     );
+
+                    let _ = c.write(&state.get_sanctum_path());
 
                     if let Err(e) = Branch::update_branch(&b.name, &c, state, &BranchSource::Local)
                     {
@@ -112,8 +114,10 @@ pub fn commit(state: &mut State, args: CommitArgs) {
                         "none".to_string(),
                         args.message.clone(),
                         description.to_string(),
-                        &state.get_sanctum_path(),
+                        vec![],
                     );
+
+                    let _ = c.write(&state.get_sanctum_path());
 
                     if let Err(e) = Branch::update_branch(&b.name, &c, state, &BranchSource::Local)
                     {
@@ -143,8 +147,10 @@ pub fn commit(state: &mut State, args: CommitArgs) {
                     "none".to_string(),
                     args.message,
                     description.to_string(),
-                    &state.get_sanctum_path(),
+                    vec![],
                 );
+
+                let _ = c.write(&state.get_sanctum_path());
 
                 println!(
                     "head is empty (no thoughts); instantiating new branch with commit: {}",

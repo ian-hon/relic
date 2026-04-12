@@ -12,3 +12,5 @@ pub mod write;
 pub mod branch;
 pub mod data;
 pub mod state;
+
+pub mod credentials;

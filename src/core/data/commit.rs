@@ -1,6 +1,5 @@
-use std::path::Path;
-
 use crate::core::{
+    credentials::{identity::Identity, signature::Signature},
     object::{Object, ObjectLike, ObjectType},
     oid::ObjectID,
     util::{
@@ -8,6 +7,7 @@ use crate::core::{
         url_encode,
     },
 };
+use std::path::Path;
 
 /*
 Commit format:
@@ -38,6 +38,8 @@ pub struct Commit {
     pub author: String,      // lets assume author names follow a strict format
     pub message: String,     // url encoded when saved
     pub description: String, // url encoded when saved
+
+    pub signatures: Vec<Signature>,
 }
 impl Commit {
     pub fn new(
@@ -48,8 +50,7 @@ impl Commit {
         author: String,
         message: String,
         description: String,
-
-        sanctum_path: &Path,
+        signatures: Vec<&Signature>,
     ) -> Commit {
         let mut c = Commit {
             oid: empty_oid().into(),
@@ -60,11 +61,13 @@ impl Commit {
             author,
             message,
             description,
+            signatures: signatures
+                .into_iter()
+                .map(|s| s.to_owned())
+                .collect::<Vec<Signature>>(),
         };
 
         c.oid = oid_digest_data(&c.serialise()).into();
-
-        c.write(sanctum_path);
 
         c
     }
@@ -88,7 +91,7 @@ parent {}
 {}timestamp {}
 author {}
 message {}
-description {}",
+description {}{}",
             self.tree.to_string(),
             if let Some(p) = self.parent {
                 p.to_string()
@@ -106,7 +109,11 @@ description {}",
             self.timestamp,
             self.author,
             url_encode(&self.message),
-            url_encode(&self.description)
+            url_encode(&self.description),
+            self.signatures.iter().fold("".to_string(), |mut i, s| {
+                i.push_str(format!("\nsignature {}", s.serialise()).as_str());
+                i
+            })
         )
     }
 
@@ -185,6 +192,13 @@ description {}",
             "".to_string()
         };
 
+        // TODO: TEST
+        let signatures = if let Some(s) = pairs.get("signature") {
+            s.iter().filter_map(|i| Signature::deserialise(i)).collect()
+        } else {
+            vec![]
+        };
+
         let mut c = Commit {
             oid: empty_oid().into(),
             tree,
@@ -194,6 +208,7 @@ description {}",
             author,
             message,
             description,
+            signatures,
         };
 
         c.oid = oid_digest_data(&c.serialise()).into();

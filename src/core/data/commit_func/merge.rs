@@ -1,6 +1,7 @@
 use crate::core::{
     data::{commit::Commit, commit_func::CommitState},
     error::{MergeError, RelicError},
+    object::ObjectLike,
     state::State,
     util::get_time,
 };
@@ -21,25 +22,26 @@ impl Commit {
                 // feature has commits that base doesnt
                 assert_eq!(feature.oid, v.last().unwrap().oid);
 
+                let c = Commit::new(
+                    feature.tree,
+                    Some(base.oid),
+                    vec![feature.oid],
+                    get_time(),
+                    base.author.clone(),
+                    format!(
+                        "Merge: {} into {}",
+                        feature.oid.to_string(),
+                        base.oid.to_string()
+                    ),
+                    "Merge automatically constructed by relic".to_string(),
+                    vec![],
+                );
+
+                c.write(&state.get_sanctum_path());
+
                 // add a merge commit on base
                 // use feature's tree
-                Ok((
-                    Commit::new(
-                        feature.tree,
-                        Some(base.oid),
-                        vec![feature.oid],
-                        get_time(),
-                        base.author.clone(),
-                        format!(
-                            "Merge: {} into {}",
-                            feature.oid.to_string(),
-                            base.oid.to_string()
-                        ),
-                        "Merge automatically constructed by relic".to_string(),
-                        &state.get_sanctum_path(),
-                    ),
-                    commit_state,
-                ))
+                Ok((c, commit_state))
             }
             CommitState::Behind(_) => {
                 return Err(RelicError::MergeError(MergeError::AlreadyContainsChanges))
